@@ -1,100 +1,95 @@
-# SnapSave
+# SnapSave ⚡
+
+> Save code snippets and text directly to real files on Android — without clipboard limits.
 
 <p align="center">
-  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="SnapSave Logo" width="128" height="128" />
+  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" alt="SnapSave Logo" width="112" height="112" />
 </p>
-
-<h3 align="center">Instant Code & Text Snippets to Real Files on Android</h3>
 
 <p align="center">
-  <a href="https://github.com/dev-hkm/SnapSave/releases"><img src="https://img.shields.io/github/v/release/dev-hkm/SnapSave?color=38BDF8&label=Release&style=flat-square" alt="GitHub Release" /></a>
-  <a href="https://developer.android.com/about/versions/oreo"><img src="https://img.shields.io/badge/Android-8.0%2B%20(API%2026--35)-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android minSdk 26" /></a>
-  <a href="https://kotlinlang.org/"><img src="https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin 2.0.21" /></a>
-  <a href="https://developer.android.com/jetpack/compose"><img src="https://img.shields.io/badge/Jetpack%20Compose-2024.12.01-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" /></a>
-  <a href="https://m3.material.io/"><img src="https://img.shields.io/badge/Material%20Design-3%20Dynamic%20Color-blueviolet?style=flat-square" alt="Material 3" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat-square" alt="License" /></a>
+  <a href="https://github.com/dev-hkm/SnapSave/releases"><img src="https://img.shields.io/github/v/release/dev-hkm/SnapSave?color=38BDF8&label=Download%20APK&style=flat-square" alt="Download APK" /></a>
+  <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Android 8.0+" />
+  <img src="https://img.shields.io/badge/Kotlin-Compose-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin & Jetpack Compose" />
+  <img src="https://img.shields.io/badge/Material%20You-Dynamic%20Color-blueviolet?style=flat-square" alt="Material You" />
 </p>
 
 ---
 
-## ⚡ The Problem & The Solution
+## Why I Built This
 
-**The Pain Point:**  
-On Android, copying very large text blocks (several hundred lines of code, logs, HTML documents, or JSON payloads) frequently gets truncated or laggy due to clipboard transaction limits. Moreover, pasting long code into mobile text editors requires tedious multi-step app switching.
+I read and write a lot of code on my phone — chatting with AI (ChatGPT, Claude), reading GitHub issues, and browsing Stack Overflow.
 
-**The SnapSave Solution:**  
-SnapSave **bypasses the clipboard entirely**. By integrating with Android's native text selection toolbar (`ACTION_PROCESS_TEXT`) and share menu (`ACTION_SEND`), SnapSave captures selected text directly from the source app without touching clipboard memory. In a single tap, it identifies the language, formats the filename, and saves it as a real physical file on your device.
+Whenever I wanted to save a long snippet or an entire HTML/Python script, I kept hitting the same two annoyances:
+1. **The Android clipboard limit**: When a snippet is several hundred lines long, the system clipboard often drops characters, chokes, or strips formatting.
+2. **Too much jumping around**: Copy text &rarr; leave browser &rarr; open a file manager or text editor &rarr; create file &rarr; name it &rarr; paste. It gets tiring very fast.
 
----
-
-## ✨ Features
-
-- 🚀 **Zero-Clipboard Selection Capture (`ACTION_PROCESS_TEXT`)**: Highlight text in any application (browser, chat, PDF reader, notes) &rarr; tap **SnapSave** in the floating toolbar &rarr; instant 1-tap save.
-- 📤 **System Share Receiver (`ACTION_SEND`)**: Receive code and text directly from any application's share sheet.
-- 🧠 **Smart Syntax Detection**: Automatically detects 20+ file formats and programming languages, including Kotlin, Java, Python, TypeScript, JavaScript, HTML, CSS, JSON, SQL, Rust, Go, C/C++, Shell, Markdown, and YAML.
-- 🏷️ **Official VS Code Material Icons**: High-fidelity language badges and file type indicators powered by official Material Icon Theme artwork.
-- 💾 **Dual Storage Engine**:
-  - **App Sandbox**: Fast, isolated storage tracked with **Room Database**.
-  - **Device Storage**: Directly write to `/Download/SnapSave` or any custom folder via Storage Access Framework (SAF).
-  - Configurable default save target in **Settings** (App only, Device, or Both).
-- 🔗 **Forward to System App Chooser**: Immediately open newly saved snippets in your preferred code editors, IDEs, or viewers with the native Android app chooser.
-- 🎨 **Material Design 3 & Material You**:
-  - Full Dynamic Color support on Android 12+ (accented tonal palettes matching user wallpaper).
-  - Specially crafted **Dynamic Themed Icon** with crisp layered contours and grounding drop shadow.
-  - Edge-to-edge transparent system bars and fluid spring physics animations.
-- 📳 **Refined Haptics**: Subtle tactile clicks on chip selection and confirmation haptic feedback on successful save.
-- 🌐 **Full Localization**: English (default) and Tiếng Việt with instant in-app switching.
+So I built **SnapSave** to skip the clipboard entirely and make saving files a 1-second action.
 
 ---
 
-## 🏗️ Architecture & Tech Stack
+## How It Works
 
-SnapSave adheres to modern Android app architecture standards, prioritizing clean separation of concerns, unidirectional data flow, and testability.
+Instead of copying to clipboard, SnapSave hooks directly into Android's native text selection system:
 
-| Layer | Technologies / Patterns |
-|---|---|
-| **UI Layer** | Jetpack Compose (BOM `2024.12.01`), Material 3, Single-Activity Navigation |
-| **Architecture** | MVVM + Repository Pattern + Clean Architecture |
-| **Concurrency** | Kotlin Coroutines & Asynchronous `StateFlow` / `SharedFlow` |
-| **Database** | Room 2.6.1 with KSP (Kotlin Symbol Processing) |
-| **Preferences** | Jetpack DataStore Preferences |
-| **Inter-App Sharing**| Android `FileProvider` with scoped URI permissions & `MediaStore` / SAF |
-| **Language** | Kotlin 2.0.21 (JVM 17) |
-| **Build Tools** | Android Gradle Plugin 8.7.3, Gradle 8.9, Target SDK 35 |
+1. **Highlight text anywhere** — In Chrome, Discord, notes, or any app.
+2. **Tap "SnapSave"** in the floating menu (next to Copy / Share).
+3. **SnapSave pops up a small bottom sheet**:
+   - It automatically detects the language (Kotlin, Python, HTML, JSON, SQL, etc.).
+   - Suggests a clean filename with the right extension.
+   - Saves directly to your phone storage (`/Download/SnapSave` or internal app storage).
+4. **Open immediately**: Tap "Open with..." to launch the file right away in your favorite code editor, or let it auto-dismiss.
 
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- **Android Studio** Ladybug (2024.2.1) or Panda
-- **JDK 17** (Temurin, Azul Zulu, or Android Studio bundled JBR)
-- **Android SDK** API 35 (minSdk 26 - Android 8.0 Oreo)
-
-### Building from Source
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/dev-hkm/SnapSave.git
-   cd SnapSave
-   ```
-
-2. Assemble the debug build:
-   ```bash
-   ./gradlew assembleDebug
-   ```
-
-3. Assemble the release build:
-   ```bash
-   ./gradlew assembleRelease
-   ```
-   The compiled APK will be located at `app/build/outputs/apk/release/`.
+You can also send text through the normal Android **Share** menu (`ACTION_SEND`).
 
 ---
 
-## 📦 Downloads
+## What's Inside
 
-Check out the [Releases](https://github.com/dev-hkm/SnapSave/releases) page for the latest signed APKs and detailed changelogs.
+- **Zero-clipboard capture**: Uses `ACTION_PROCESS_TEXT` so huge text blocks are passed directly via Intent, completely intact.
+- **Auto syntax detection**: Guesses between 20+ file formats (JSON parser test, HTML tag checks, code keyword heuristics).
+- **Official VS Code Material Icons**: Real file type icons from Material Icon Theme, not generic placeholders.
+- **Dual storage**: Save internally (managed with Room Database) or directly to your device storage via MediaStore / Storage Access Framework. You can set your default preference in Settings so you don't have to pick every time.
+- **Material You Dynamic Color**: The app theme and launcher icon adapt to your wallpaper palette on Android 12+.
+- **Haptic feedback**: Nice tactile clicks when picking chips and a solid confirm buzz when a file is safely written.
+- **Lightweight & fast**: No heavy third-party SDKs, no ads, no trackers. Starts instantly.
+- **Bilingual**: English and Tiếng Việt (switchable in Settings).
+
+---
+
+## Tech Stack
+
+Built simply and cleanly with modern Android libraries:
+
+- **Language**: Kotlin 2.0.21
+- **UI**: Jetpack Compose + Material 3 (Edge-to-Edge, dynamic theming)
+- **Database**: Room (KSP) + Kotlin Coroutines / Flow
+- **Settings**: Jetpack DataStore Preferences
+- **System**: `ACTION_PROCESS_TEXT`, `ACTION_SEND`, `FileProvider`, `MediaStore`
+- **DI**: Manual container (AppContainer) to keep compile times fast and the APK small (~14MB)
+
+---
+
+## Download & Install
+
+Grab the signed release APK from the [Releases](https://github.com/dev-hkm/SnapSave/releases) page:
+
+👉 **[Download Latest Release (v1.0.10)](https://github.com/dev-hkm/SnapSave/releases/tag/v1.0.10)**
+
+Works on Android 8.0 (API 26) up to Android 15 (API 35).
+
+---
+
+## Building From Source
+
+If you want to poke around the code or build it yourself:
+
+```bash
+git clone https://github.com/dev-hkm/SnapSave.git
+cd SnapSave
+./gradlew assembleRelease
+```
+
+Open in Android Studio (Ladybug / Panda) with JDK 17.
 
 ---
 
