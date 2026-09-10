@@ -1,0 +1,33 @@
+*.iml
+.gradle
+/.kotlin
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+build/
+**/build/
+app/build/
+/build
+/captures
+.externalNativeBuild
+local.properties
+*.apk
+*.idsig
+
+# Keystores and secrets
+*.jks
+*.keystore
+*.p12
+*.key
+secrets.properties
+release-signing.properties
+
+# Notes, scratch, and legacy extensions
+01.md
+browser-extension/
+*.py

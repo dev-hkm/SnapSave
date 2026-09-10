@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+
+    <group
+        android:pivotX="256"
+        android:pivotY="256"
+        android:scaleX="1.0"
+        android:scaleY="1.0">
+
+        <!-- Shadow -->
+        <path
+            android:fillColor="#D6E2F5"
+            android:pathData="M 168,366 a 88,17 0 1,0 176,0 a 88,17 0 1,0 -176,0 Z" />
+
+        <!-- Back file: rotate(-9 244 246) -->
+        <group
+            android:pivotX="244"
+            android:pivotY="246"
+            android:rotation="-9">
+            <path
+                android:fillColor="#AFC8FF"
+                android:strokeColor="#26334A"
+                android:strokeWidth="8"
+                android:strokeLineJoin="round"
+                android:pathData="M 220,154 h 72 a 30,30 0 0,1 30,30 v 114 a 30,30 0 0,1 -30,30 h -72 a 30,30 0 0,1 -30,-30 v -114 a 30,30 0 0,1 30,-30 Z" />
+        </group>
+
+        <!-- Middle file: rotate(7 266 248) -->
+        <group
+            android:pivotX="266"
+            android:pivotY="248"
+            android:rotation="7">
+            <path
+                android:fillColor="#7EA6FF"
+                android:strokeColor="#26334A"
+                android:strokeWidth="8"
+                android:strokeLineJoin="round"
+                android:pathData="M 232,158 h 72 a 30,30 0 0,1 30,30 v 114 a 30,30 0 0,1 -30,30 h -72 a 30,30 0 0,1 -30,-30 v -114 a 30,30 0 0,1 30,-30 Z" />
+        </group>
+
+        <!-- Front file -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:strokeColor="#26334A"
+            android:strokeWidth="8"
+            android:strokeLineJoin="round"
+            android:pathData="M205,174 C205,158 218,145 234,145 H285 L317,177 V300 C317,316 304,329 288,329 H224 C208,329 195,316 195,300 V184 C195,178 199,174 205,174 Z" />
+
+        <!-- Folded file corner -->
+        <path
+            android:fillColor="#DDE8FF"
+            android:strokeColor="#26334A"
+            android:strokeWidth="7"
+            android:strokeLineJoin="round"
+            android:pathData="M285,145 V168 C285,176 291,182 299,182 H317 Z" />
+
+        <!-- Snap / Lightning -->
+        <path
+            android:fillColor="#FFD447"
+            android:strokeColor="#26334A"
+            android:strokeWidth="8"
+            android:strokeLineJoin="round"
+            android:pathData="M267,187 L226,250 H253 L236,307 L293,233 H265 L287,187 Z" />
+
+    </group>
+</vector>
