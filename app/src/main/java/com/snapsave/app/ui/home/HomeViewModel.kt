@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+import android.net.Uri
+import com.snapsave.app.core.FileStore
+
 data class HomeUiState(
     val all: List<SnippetEntity> = emptyList(),
     val visible: List<SnippetEntity> = emptyList(),
@@ -26,7 +29,10 @@ data class HomeUiState(
     val query: String = "",
     val activeLanguage: String? = null,
     val tipDismissed: Boolean = true,
-    val loading: Boolean = true
+    val loading: Boolean = true,
+    val showSearchBar: Boolean = true,
+    val showCategoryBar: Boolean = true,
+    val isGridView: Boolean = false
 )
 
 sealed interface HomeEvent {
@@ -35,7 +41,8 @@ sealed interface HomeEvent {
 
 class HomeViewModel(
     private val repo: SnippetRepository,
-    private val settings: SettingsRepository
+    private val settings: SettingsRepository,
+    private val files: FileStore
 ) : ViewModel() {
 
     private val query = MutableStateFlow("")
@@ -63,7 +70,10 @@ class HomeViewModel(
             query = q,
             activeLanguage = lang,
             tipDismissed = pref.tipDismissed,
-            loading = false
+            loading = false,
+            showSearchBar = pref.showSearchBar,
+            showCategoryBar = pref.showCategoryBar,
+            isGridView = pref.isGridView
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
@@ -95,6 +105,18 @@ class HomeViewModel(
         }
     }
 
+    fun toggleViewMode() {
+        viewModelScope.launch {
+            settings.setIsGridView(!uiState.value.isGridView)
+        }
+    }
+
+    fun shareData(e: SnippetEntity): Pair<Uri, String> =
+        files.uriFor(e.fileName) to files.mimeFor(e.extension)
+
+    suspend fun getContent(e: SnippetEntity): String =
+        runCatching { repo.content(e) }.getOrDefault("")
+
     fun dismissTip() {
         viewModelScope.launch { settings.setTipDismissed(true) }
     }
@@ -110,7 +132,7 @@ class HomeViewModel(
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val app = this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as SnapSaveApp
-                HomeViewModel(app.container.repository, app.container.settings)
+                HomeViewModel(app.container.repository, app.container.settings, app.container.fileStore)
             }
         }
     }

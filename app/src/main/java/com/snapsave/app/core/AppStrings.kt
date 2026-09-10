@@ -133,6 +133,25 @@ interface AppStrings {
     val openWithAction: String
     val openWithTitle: String
     val doneAction: String
+
+    // Home layout & toggles
+    val showSearchBarTitle: String
+    val showSearchBarSubtitle: String
+    val showCategoryBarTitle: String
+    val showCategoryBarSubtitle: String
+    val viewLayoutTitle: String
+    val viewLayoutList: String
+    val viewLayoutGrid: String
+    val switchViewModeDesc: String
+
+    // Long press action sheet
+    val cardActionSheetTitle: String
+    val actionViewDetails: String
+    val actionCopyCode: String
+    val actionShareFile: String
+    val actionDeleteFile: String
+    val actionOpenWith: String
+    val copiedToClipboard: String
 }
 
 object StringsEn : AppStrings {
@@ -274,6 +293,25 @@ object StringsEn : AppStrings {
     override val openWithAction = "Open with…"
     override val openWithTitle = "Open file with…"
     override val doneAction = "Done"
+
+    // Home layout & toggles
+    override val showSearchBarTitle = "Show search bar"
+    override val showSearchBarSubtitle = "Display search field on home screen"
+    override val showCategoryBarTitle = "Show category tags"
+    override val showCategoryBarSubtitle = "Display language filter chips on home screen"
+    override val viewLayoutTitle = "Default View Layout"
+    override val viewLayoutList = "List"
+    override val viewLayoutGrid = "Grid"
+    override val switchViewModeDesc = "Switch between list and grid view"
+
+    // Long press action sheet
+    override val cardActionSheetTitle = "Snippet Actions"
+    override val actionViewDetails = "View details"
+    override val actionCopyCode = "Copy code"
+    override val actionShareFile = "Share snippet"
+    override val actionDeleteFile = "Delete snippet"
+    override val actionOpenWith = "Open with…"
+    override val copiedToClipboard = "Snippet copied to clipboard"
 }
 
 object StringsVi : AppStrings {
@@ -413,6 +451,25 @@ object StringsVi : AppStrings {
     override val openWithAction = "Mở bằng…"
     override val openWithTitle = "Mở tệp bằng…"
     override val doneAction = "Xong"
+
+    // Home layout & toggles
+    override val showSearchBarTitle = "Hiện thanh tìm kiếm"
+    override val showSearchBarSubtitle = "Hiển thị ô tìm kiếm nhanh trên màn hình chính"
+    override val showCategoryBarTitle = "Hiện thanh danh mục"
+    override val showCategoryBarSubtitle = "Hiển thị hàng chip lọc ngôn ngữ trên màn hình chính"
+    override val viewLayoutTitle = "Chế độ xem mặc định"
+    override val viewLayoutList = "Danh sách"
+    override val viewLayoutGrid = "Lưới"
+    override val switchViewModeDesc = "Chuyển đổi giữa dạng danh sách và lưới"
+
+    // Long press action sheet
+    override val cardActionSheetTitle = "Thao tác tệp"
+    override val actionViewDetails = "Xem chi tiết"
+    override val actionCopyCode = "Sao chép mã"
+    override val actionShareFile = "Chia sẻ tệp"
+    override val actionDeleteFile = "Xóa tệp"
+    override val actionOpenWith = "Mở bằng…"
+    override val copiedToClipboard = "Đã sao chép vào bộ nhớ tạm"
 }
 
 val LocalAppStrings = compositionLocalOf<AppStrings> { StringsEn }

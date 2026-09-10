@@ -59,6 +59,18 @@ class SettingsViewModel(
         viewModelScope.launch { settings.setHaptics(enabled) }
     }
 
+    fun setShowSearchBar(enabled: Boolean) {
+        viewModelScope.launch { settings.setShowSearchBar(enabled) }
+    }
+
+    fun setShowCategoryBar(enabled: Boolean) {
+        viewModelScope.launch { settings.setShowCategoryBar(enabled) }
+    }
+
+    fun setIsGridView(isGrid: Boolean) {
+        viewModelScope.launch { settings.setIsGridView(isGrid) }
+    }
+
     fun setLanguage(language: String) {
         languageOverride = language
         viewModelScope.launch {

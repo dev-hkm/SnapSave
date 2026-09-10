@@ -30,7 +30,10 @@ data class ThemeSettings(
     val dynamicColor: Boolean = true,
     val hapticsEnabled: Boolean = true,
     val tipDismissed: Boolean = false,
-    val language: String = "en" // "en" (default) or "vi"
+    val language: String = "en", // "en" (default) or "vi"
+    val showSearchBar: Boolean = true,
+    val showCategoryBar: Boolean = true,
+    val isGridView: Boolean = false
 )
 
 data class StorageSettings(
@@ -57,6 +60,9 @@ class SettingsRepository(private val context: Context) {
         val CUSTOM_FOLDER_URI = stringPreferencesKey("custom_folder_uri")
         val CUSTOM_FOLDER_NAME = stringPreferencesKey("custom_folder_name")
         val APP_LANGUAGE = stringPreferencesKey("app_language")
+        val SHOW_SEARCH_BAR = booleanPreferencesKey("show_search_bar")
+        val SHOW_CATEGORY_BAR = booleanPreferencesKey("show_category_bar")
+        val IS_GRID_VIEW = booleanPreferencesKey("is_grid_view")
     }
 
     init {
@@ -74,7 +80,10 @@ class SettingsRepository(private val context: Context) {
             dynamicColor = p[Keys.DYNAMIC_COLOR] ?: true,
             hapticsEnabled = p[Keys.HAPTICS] ?: true,
             tipDismissed = p[Keys.TIP_DISMISSED] ?: false,
-            language = p[Keys.APP_LANGUAGE] ?: "en"
+            language = p[Keys.APP_LANGUAGE] ?: "en",
+            showSearchBar = p[Keys.SHOW_SEARCH_BAR] ?: true,
+            showCategoryBar = p[Keys.SHOW_CATEGORY_BAR] ?: true,
+            isGridView = p[Keys.IS_GRID_VIEW] ?: false
         ).also { cachedThemeSettings = it }
     }
 
@@ -100,6 +109,18 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setTipDismissed(dismissed: Boolean) {
         context.dataStore.edit { it[Keys.TIP_DISMISSED] = dismissed }
+    }
+
+    suspend fun setShowSearchBar(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.SHOW_SEARCH_BAR] = enabled }
+    }
+
+    suspend fun setShowCategoryBar(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.SHOW_CATEGORY_BAR] = enabled }
+    }
+
+    suspend fun setIsGridView(isGrid: Boolean) {
+        context.dataStore.edit { it[Keys.IS_GRID_VIEW] = isGrid }
     }
 
     suspend fun setQuickSaveTarget(target: QuickSaveTarget) {

@@ -26,12 +26,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.ViewAgenda
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -271,6 +275,50 @@ fun SettingsScreen(
                         vm.setHaptics(it)
                     }
                 )
+
+                SettingSwitchRow(
+                    icon = Icons.Rounded.Search,
+                    title = s.showSearchBarTitle,
+                    subtitle = s.showSearchBarSubtitle,
+                    checked = theme.showSearchBar,
+                    onChange = {
+                        view.haptic(HapticKind.CLICK)
+                        vm.setShowSearchBar(it)
+                    }
+                )
+
+                SettingSwitchRow(
+                    icon = Icons.Rounded.FilterList,
+                    title = s.showCategoryBarTitle,
+                    subtitle = s.showCategoryBarSubtitle,
+                    checked = theme.showCategoryBar,
+                    onChange = {
+                        view.haptic(HapticKind.CLICK)
+                        vm.setShowCategoryBar(it)
+                    }
+                )
+
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    s.viewLayoutTitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = !theme.isGridView,
+                        onClick = { view.haptic(HapticKind.TICK); vm.setIsGridView(false) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                        icon = { Icon(Icons.Rounded.ViewAgenda, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                    ) { Text(s.viewLayoutList) }
+
+                    SegmentedButton(
+                        selected = theme.isGridView,
+                        onClick = { view.haptic(HapticKind.TICK); vm.setIsGridView(true) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                        icon = { Icon(Icons.Rounded.GridView, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                    ) { Text(s.viewLayoutGrid) }
+                }
             }
 
             // 4. Data & Storage
