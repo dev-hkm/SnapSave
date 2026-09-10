@@ -17,9 +17,9 @@
 
 ## Why I Built This
 
-I read and write a lot of code on my phone — chatting with AI (ChatGPT, Claude), reading GitHub issues, and browsing Stack Overflow.
+I use AI tools like ChatGPT and Claude on my phone all the time to build apps, generate scripts, and experiment with new ideas.
 
-Whenever I wanted to save a long snippet or an entire HTML/Python script, I kept hitting the same two annoyances:
+Whenever AI spat out a long code snippet or an entire HTML/Python file that I wanted to save, I kept hitting the same two annoyances:
 1. **The Android clipboard limit**: When a snippet is several hundred lines long, the system clipboard often drops characters, chokes, or strips formatting.
 2. **Too much jumping around**: Copy text &rarr; leave browser &rarr; open a file manager or text editor &rarr; create file &rarr; name it &rarr; paste. It gets tiring very fast.
 
