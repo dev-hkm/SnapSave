@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -39,6 +40,10 @@ class DetailViewModel(
     val entity: StateFlow<SnippetEntity?> = idFlow
         .flatMapLatest { id -> if (id <= 0) flowOf(null) else repo.observe(id) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val isPinned: StateFlow<Boolean> = combine(idFlow, settings.themeSettings) { id, theme ->
+        if (id <= 0) false else theme.pinnedIds.contains(id.toString())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _content = MutableStateFlow<String?>(null)
     val content: StateFlow<String?> = _content
@@ -90,6 +95,15 @@ class DetailViewModel(
             files.exportToDownloads(e.fileName, c)
                 .onSuccess { _messages.tryEmit(s.savedToPath(it.toString())) }
                 .onFailure { _messages.tryEmit(it.message ?: s.saveError) }
+        }
+    }
+
+    fun togglePin() {
+        val id = idFlow.value
+        if (id > 0) {
+            viewModelScope.launch {
+                settings.togglePinSnippet(id)
+            }
         }
     }
 

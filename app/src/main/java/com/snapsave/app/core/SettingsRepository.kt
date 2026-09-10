@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +34,9 @@ data class ThemeSettings(
     val language: String = "en", // "en" (default) or "vi"
     val showSearchBar: Boolean = true,
     val showCategoryBar: Boolean = true,
-    val isGridView: Boolean = false
+    val isGridView: Boolean = false,
+    val sortOrder: Int = 0, // 0 = Newest, 1 = Oldest, 2 = Title, 3 = Size
+    val pinnedIds: Set<String> = emptySet()
 )
 
 data class StorageSettings(
@@ -63,6 +66,8 @@ class SettingsRepository(private val context: Context) {
         val SHOW_SEARCH_BAR = booleanPreferencesKey("show_search_bar")
         val SHOW_CATEGORY_BAR = booleanPreferencesKey("show_category_bar")
         val IS_GRID_VIEW = booleanPreferencesKey("is_grid_view")
+        val SORT_ORDER = intPreferencesKey("sort_order")
+        val PINNED_IDS = stringSetPreferencesKey("pinned_ids")
     }
 
     init {
@@ -83,7 +88,9 @@ class SettingsRepository(private val context: Context) {
             language = p[Keys.APP_LANGUAGE] ?: "en",
             showSearchBar = p[Keys.SHOW_SEARCH_BAR] ?: true,
             showCategoryBar = p[Keys.SHOW_CATEGORY_BAR] ?: true,
-            isGridView = p[Keys.IS_GRID_VIEW] ?: false
+            isGridView = p[Keys.IS_GRID_VIEW] ?: false,
+            sortOrder = p[Keys.SORT_ORDER] ?: 0,
+            pinnedIds = p[Keys.PINNED_IDS] ?: emptySet()
         ).also { cachedThemeSettings = it }
     }
 
@@ -121,6 +128,19 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setIsGridView(isGrid: Boolean) {
         context.dataStore.edit { it[Keys.IS_GRID_VIEW] = isGrid }
+    }
+
+    suspend fun setSortOrder(order: Int) {
+        context.dataStore.edit { it[Keys.SORT_ORDER] = order.coerceIn(0, 3) }
+    }
+
+    suspend fun togglePinSnippet(snippetId: Long) {
+        val idStr = snippetId.toString()
+        context.dataStore.edit { p ->
+            val current = p[Keys.PINNED_IDS]?.toMutableSet() ?: mutableSetOf()
+            if (current.contains(idStr)) current.remove(idStr) else current.add(idStr)
+            p[Keys.PINNED_IDS] = current
+        }
     }
 
     suspend fun setQuickSaveTarget(target: QuickSaveTarget) {

@@ -152,6 +152,18 @@ interface AppStrings {
     val actionDeleteFile: String
     val actionOpenWith: String
     val copiedToClipboard: String
+
+    // Pin, Sort & Export
+    val actionPinSnippet: String
+    val actionUnpinSnippet: String
+    val pinnedHeader: String
+    val sortMenuTitle: String
+    val sortNewest: String
+    val sortOldest: String
+    val sortTitle: String
+    val sortSize: String
+    val quickCopied: String
+    val actionExportFile: String
 }
 
 object StringsEn : AppStrings {
@@ -312,6 +324,18 @@ object StringsEn : AppStrings {
     override val actionDeleteFile = "Delete snippet"
     override val actionOpenWith = "Open with…"
     override val copiedToClipboard = "Snippet copied to clipboard"
+
+    // Pin, Sort & Quick Copy
+    override val actionPinSnippet = "Pin to top"
+    override val actionUnpinSnippet = "Unpin snippet"
+    override val pinnedHeader = "Pinned"
+    override val sortMenuTitle = "Sort snippets"
+    override val sortNewest = "Newest first"
+    override val sortOldest = "Oldest first"
+    override val sortTitle = "Title (A–Z)"
+    override val sortSize = "File size"
+    override val quickCopied = "Code copied!"
+    override val actionExportFile = "Export to device (Download)"
 }
 
 object StringsVi : AppStrings {
@@ -470,6 +494,18 @@ object StringsVi : AppStrings {
     override val actionDeleteFile = "Xóa tệp"
     override val actionOpenWith = "Mở bằng…"
     override val copiedToClipboard = "Đã sao chép vào bộ nhớ tạm"
+
+    // Pin, Sort & Quick Copy
+    override val actionPinSnippet = "Ghim lên đầu"
+    override val actionUnpinSnippet = "Bỏ ghim"
+    override val pinnedHeader = "Đã ghim"
+    override val sortMenuTitle = "Sắp xếp"
+    override val sortNewest = "Mới nhất"
+    override val sortOldest = "Cũ nhất"
+    override val sortTitle = "Tên (A–Z)"
+    override val sortSize = "Dung lượng"
+    override val quickCopied = "Đã chép mã!"
+    override val actionExportFile = "Xuất ra bộ nhớ máy (Download)"
 }
 
 val LocalAppStrings = compositionLocalOf<AppStrings> { StringsEn }

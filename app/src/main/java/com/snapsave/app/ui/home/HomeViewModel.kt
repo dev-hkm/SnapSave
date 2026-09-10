@@ -32,7 +32,9 @@ data class HomeUiState(
     val loading: Boolean = true,
     val showSearchBar: Boolean = true,
     val showCategoryBar: Boolean = true,
-    val isGridView: Boolean = false
+    val isGridView: Boolean = false,
+    val sortOrder: Int = 0,
+    val pinnedIds: Set<String> = emptySet()
 )
 
 sealed interface HomeEvent {
@@ -54,18 +56,31 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = combine(
         repo.snippets, query, language, settings.themeSettings
     ) { list, q, lang, pref ->
+        val extQuery = q.trim().removePrefix(".").lowercase()
         val filtered = list.filter { e ->
             (lang == null || e.language == lang) &&
                 (
                     q.isBlank() ||
                         e.title.contains(q, ignoreCase = true) ||
                         e.preview.contains(q, ignoreCase = true) ||
-                        e.language.contains(q, ignoreCase = true)
-                    )
+                        e.language.contains(q, ignoreCase = true) ||
+                        (extQuery.isNotBlank() && e.extension.contains(extQuery, ignoreCase = true))
+                )
         }
+
+        fun List<SnippetEntity>.sortItems(order: Int): List<SnippetEntity> = when (order) {
+            1 -> sortedBy { it.updatedAt } // Oldest first
+            2 -> sortedBy { it.title.lowercase() } // Title A-Z
+            3 -> sortedByDescending { it.sizeBytes } // Size largest first
+            else -> sortedByDescending { it.updatedAt } // Newest first
+        }
+
+        val (pinned, unpinned) = filtered.partition { pref.pinnedIds.contains(it.id.toString()) }
+        val sortedList = pinned.sortItems(pref.sortOrder) + unpinned.sortItems(pref.sortOrder)
+
         HomeUiState(
             all = list,
-            visible = filtered,
+            visible = sortedList,
             languages = list.map { it.language }.distinct().sorted(),
             query = q,
             activeLanguage = lang,
@@ -73,7 +88,9 @@ class HomeViewModel(
             loading = false,
             showSearchBar = pref.showSearchBar,
             showCategoryBar = pref.showCategoryBar,
-            isGridView = pref.isGridView
+            isGridView = pref.isGridView,
+            sortOrder = pref.sortOrder,
+            pinnedIds = pref.pinnedIds
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
@@ -111,8 +128,25 @@ class HomeViewModel(
         }
     }
 
+    fun setSortOrder(order: Int) {
+        viewModelScope.launch {
+            settings.setSortOrder(order)
+        }
+    }
+
+    fun togglePin(snippetId: Long) {
+        viewModelScope.launch {
+            settings.togglePinSnippet(snippetId)
+        }
+    }
+
     fun shareData(e: SnippetEntity): Pair<Uri, String> =
         files.uriFor(e.fileName) to files.mimeFor(e.extension)
+
+    suspend fun exportSnippet(snippet: SnippetEntity): Result<String> {
+        val content = runCatching { repo.content(snippet) }.getOrDefault("")
+        return files.exportToDownloads(snippet.fileName, content)
+    }
 
     suspend fun getContent(e: SnippetEntity): String =
         runCatching { repo.content(e) }.getOrDefault("")

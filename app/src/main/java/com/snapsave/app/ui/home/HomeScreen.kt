@@ -1,10 +1,7 @@
 package com.snapsave.app.ui.home
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.view.View
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,25 +27,29 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Launch
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.automirrored.rounded.TextSnippet
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.GridView
-import androidx.compose.material.icons.rounded.Launch
+import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.ViewAgenda
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -56,12 +57,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SearchBar
-import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -75,11 +73,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -115,8 +113,8 @@ fun HomeScreen(
     val view = LocalView.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var selectedSnippetForModal by remember { mutableStateOf<SnippetEntity?>(null) }
+    var showSortMenu by remember { mutableStateOf(false) }
 
     val snackbarMsg = s.snackbarDeleted
     val undoLabel = s.undo
@@ -166,7 +164,7 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 1. Unified Scrolling Header (Title + Count + Grid/List Switch + Modern Tune Settings Button)
+            // 1. Unified Scrolling Header (Title + Count + Sort + Grid/List Switch + Modern Tune Settings Button)
             item(span = { GridItemSpan(maxLineSpan) }, key = "header") {
                 Row(
                     modifier = Modifier
@@ -195,6 +193,70 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Sort Menu Button
+                        Box {
+                            Surface(
+                                onClick = {
+                                    view.haptic(HapticKind.CLICK)
+                                    showSortMenu = true
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .pressScale()
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Rounded.Sort,
+                                        contentDescription = s.sortMenuTitle,
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false }
+                            ) {
+                                val sortOptions = listOf(
+                                    0 to s.sortNewest,
+                                    1 to s.sortOldest,
+                                    2 to s.sortTitle,
+                                    3 to s.sortSize
+                                )
+                                sortOptions.forEach { (order, label) ->
+                                    val isSelected = state.sortOrder == order
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = label,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        },
+                                        trailingIcon = if (isSelected) {
+                                            {
+                                                Icon(
+                                                    Icons.Rounded.Check,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        } else null,
+                                        onClick = {
+                                            view.haptic(HapticKind.CLICK)
+                                            vm.setSortOrder(order)
+                                            showSortMenu = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
                         // Quick Grid / List Toggle Button
                         Surface(
                             onClick = {
@@ -244,70 +306,62 @@ fun HomeScreen(
                 }
             }
 
-            // 2. Search Bar (Toggleable from Settings)
+            // 2. Safe, Inline Search Bar (Fixed crash: Never use M3 SearchBar inside LazyLayout)
             if (state.showSearchBar) {
                 item(span = { GridItemSpan(maxLineSpan) }, key = "search") {
-                    SearchBar(
-                        inputField = {
-                            SearchBarDefaults.InputField(
-                                query = state.query,
-                                onQueryChange = vm::setQuery,
-                                onSearch = { searchExpanded = false },
-                                expanded = searchExpanded,
-                                onExpandedChange = { searchExpanded = it },
-                                placeholder = { Text(s.searchPlaceholder) },
-                                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                                trailingIcon = {
-                                    if (state.query.isNotBlank()) {
-                                        IconButton(onClick = { vm.setQuery("") }) {
-                                            Icon(Icons.Rounded.Close, contentDescription = s.clearSearchDesc)
-                                        }
-                                    }
-                                }
-                            )
-                        },
-                        expanded = searchExpanded,
-                        onExpandedChange = { searchExpanded = it },
-                        windowInsets = WindowInsets(0, 0, 0, 0),
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 2.dp, bottom = 2.dp)
+                            .padding(vertical = 4.dp)
                     ) {
-                        if (state.languages.isEmpty()) {
-                            Box(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(40.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(s.searchEmptyHint, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        } else {
-                            Column(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .verticalScroll(rememberScrollState())
-                            ) {
-                                Text(
-                                    s.savedLanguagesHeader,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+                        ) {
+                            Icon(
+                                Icons.Rounded.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Box(modifier = Modifier.weight(1f)) {
+                                if (state.query.isEmpty()) {
+                                    Text(
+                                        text = s.searchPlaceholder,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                BasicTextField(
+                                    value = state.query,
+                                    onValueChange = vm::setQuery,
+                                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    ),
+                                    singleLine = true,
+                                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                    modifier = Modifier.fillMaxWidth()
                                 )
-                                state.languages.take(8).forEach { lang ->
-                                    ListItem(
-                                        headlineContent = { Text(lang, fontWeight = FontWeight.SemiBold) },
-                                        leadingContent = {
-                                            LanguageIconBox(
-                                                language = lang,
-                                                extension = lang,
-                                                size = 28.dp,
-                                                shapeRadius = 8.dp
-                                            )
-                                        },
-                                        modifier = Modifier.clickable {
-                                            vm.setQuery(lang)
-                                            searchExpanded = false
-                                        }
+                            }
+                            if (state.query.isNotBlank()) {
+                                IconButton(
+                                    onClick = {
+                                        view.haptic(HapticKind.CLICK)
+                                        vm.setQuery("")
+                                    },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Rounded.Close,
+                                        contentDescription = s.clearSearchDesc,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
@@ -383,9 +437,23 @@ fun HomeScreen(
                     key = { it.id },
                     contentType = { "snippet" }
                 ) { snippet ->
+                    val isPinned = state.pinnedIds.contains(snippet.id.toString())
+                    val quickShareAction: () -> Unit = {
+                        view.haptic(HapticKind.CLICK)
+                        val (uri, mime) = vm.shareData(snippet)
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = mime
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(Intent.createChooser(send, s.shareTitle))
+                    }
+
                     if (state.isGridView) {
                         SnippetGridCard(
                             snippet = snippet,
+                            isPinned = isPinned,
+                            onQuickShare = quickShareAction,
                             onClick = {
                                 view.haptic(HapticKind.CLICK)
                                 onOpenDetail(snippet.id)
@@ -399,6 +467,8 @@ fun HomeScreen(
                     } else {
                         SnippetCard(
                             snippet = snippet,
+                            isPinned = isPinned,
+                            onQuickShare = quickShareAction,
                             onClick = {
                                 view.haptic(HapticKind.CLICK)
                                 onOpenDetail(snippet.id)
@@ -415,11 +485,18 @@ fun HomeScreen(
         }
     }
 
-    // 6. Long-Press Action Bottom Sheet
+    // 6. Long-Press Action Bottom Sheet (Zero Clipboard dependence, 100% loss-free file transport)
     selectedSnippetForModal?.let { snippet ->
+        val isSnippetPinned = state.pinnedIds.contains(snippet.id.toString())
         SnippetActionBottomSheet(
             snippet = snippet,
+            isPinned = isSnippetPinned,
             onDismiss = { selectedSnippetForModal = null },
+            onTogglePin = {
+                view.haptic(HapticKind.CLICK)
+                vm.togglePin(snippet.id)
+                selectedSnippetForModal = null
+            },
             onOpenDetail = {
                 selectedSnippetForModal = null
                 view.haptic(HapticKind.CLICK)
@@ -462,20 +539,23 @@ fun HomeScreen(
                 }
                 context.startActivity(Intent.createChooser(send, s.shareTitle))
             },
-            onCopy = {
+            onExport = {
                 selectedSnippetForModal = null
                 view.haptic(HapticKind.CLICK)
                 scope.launch {
-                    val content = vm.getContent(snippet)
-                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                    cm.setPrimaryClip(ClipData.newPlainText(snippet.title, content))
-                    view.haptic(HapticKind.CONFIRM)
-                    snackbarState.showSnackbar(s.copiedToClipboard)
+                    vm.exportSnippet(snippet)
+                        .onSuccess { path ->
+                            view.haptic(HapticKind.CONFIRM)
+                            snackbarState.showSnackbar(s.savedToPath(path))
+                        }
+                        .onFailure { err ->
+                            snackbarState.showSnackbar(err.message ?: s.saveError)
+                        }
                 }
             },
             onDelete = {
                 selectedSnippetForModal = null
-                view.haptic(HapticKind.CONFIRM)
+                view.haptic(HapticKind.CLICK)
                 vm.delete(snippet)
             }
         )
@@ -486,11 +566,13 @@ fun HomeScreen(
 @Composable
 private fun SnippetActionBottomSheet(
     snippet: SnippetEntity,
+    isPinned: Boolean,
     onDismiss: () -> Unit,
+    onTogglePin: () -> Unit,
     onOpenDetail: () -> Unit,
     onOpenWith: () -> Unit,
     onShare: () -> Unit,
-    onCopy: () -> Unit,
+    onExport: () -> Unit,
     onDelete: () -> Unit
 ) {
     val s = S
@@ -543,14 +625,10 @@ private fun SnippetActionBottomSheet(
             )
 
             ActionListItem(
-                icon = Icons.AutoMirrored.Rounded.OpenInNew,
-                title = s.actionViewDetails,
-                onClick = onOpenDetail
-            )
-            ActionListItem(
-                icon = Icons.Rounded.Launch,
-                title = s.actionOpenWith,
-                onClick = onOpenWith
+                icon = Icons.Rounded.PushPin,
+                title = if (isPinned) s.actionUnpinSnippet else s.actionPinSnippet,
+                tint = MaterialTheme.colorScheme.primary,
+                onClick = onTogglePin
             )
             ActionListItem(
                 icon = Icons.Rounded.Share,
@@ -558,9 +636,19 @@ private fun SnippetActionBottomSheet(
                 onClick = onShare
             )
             ActionListItem(
-                icon = Icons.Rounded.ContentCopy,
-                title = s.actionCopyCode,
-                onClick = onCopy
+                icon = Icons.AutoMirrored.Rounded.Launch,
+                title = s.actionOpenWith,
+                onClick = onOpenWith
+            )
+            ActionListItem(
+                icon = Icons.Rounded.FileDownload,
+                title = s.actionExportFile,
+                onClick = onExport
+            )
+            ActionListItem(
+                icon = Icons.AutoMirrored.Rounded.OpenInNew,
+                title = s.actionViewDetails,
+                onClick = onOpenDetail
             )
             ActionListItem(
                 icon = Icons.Rounded.Delete,

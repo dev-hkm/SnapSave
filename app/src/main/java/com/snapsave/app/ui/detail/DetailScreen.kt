@@ -1,8 +1,6 @@
 package com.snapsave.app.ui.detail
 
 import android.Manifest
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -27,6 +25,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Launch
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Close
@@ -35,6 +34,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FormatListNumbered
+import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Storage
@@ -98,6 +98,7 @@ fun DetailScreen(
     val s = S
     val entity by vm.entity.collectAsStateWithLifecycle()
     val content by vm.content.collectAsStateWithLifecycle()
+    val isPinned by vm.isPinned.collectAsStateWithLifecycle()
 
     var editing by rememberSaveable { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -179,16 +180,6 @@ fun DetailScreen(
                             .padding(horizontal = 8.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        ActionTile(icon = Icons.Rounded.ContentCopy, label = s.copy) {
-                            val text = content
-                            if (text != null) {
-                                view.haptic(HapticKind.CLICK)
-                                val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                cm.setPrimaryClip(ClipData.newPlainText(e.title, text))
-                                view.haptic(HapticKind.CONFIRM)
-                                scope.launch { snackbarState.showSnackbar(s.copiedChars(text.length)) }
-                            }
-                        }
                         ActionTile(icon = Icons.Rounded.Share, label = s.share) {
                             view.haptic(HapticKind.CLICK)
                             val (uri, mime) = vm.shareData(e)
@@ -199,7 +190,7 @@ fun DetailScreen(
                             }
                             context.startActivity(Intent.createChooser(send, s.shareTitle))
                         }
-                        ActionTile(icon = Icons.AutoMirrored.Rounded.OpenInNew, label = s.openWithAction) {
+                        ActionTile(icon = Icons.AutoMirrored.Rounded.Launch, label = s.openWithAction) {
                             view.haptic(HapticKind.CLICK)
                             val (uri, mime) = vm.shareData(e)
                             val viewIntent = Intent(Intent.ACTION_VIEW).apply {
@@ -227,6 +218,13 @@ fun DetailScreen(
                         ActionTile(icon = Icons.Rounded.FileDownload, label = s.saveToDevice) {
                             view.haptic(HapticKind.CLICK)
                             exportWithPermission()
+                        }
+                        ActionTile(
+                            icon = Icons.Rounded.PushPin,
+                            label = if (isPinned) s.actionUnpinSnippet else s.actionPinSnippet
+                        ) {
+                            view.haptic(HapticKind.CLICK)
+                            vm.togglePin()
                         }
                     }
                 }

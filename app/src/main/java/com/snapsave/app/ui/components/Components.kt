@@ -44,11 +44,15 @@ import androidx.compose.material.icons.rounded.Php
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Tag
 import androidx.compose.material.icons.rounded.Terminal
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -272,6 +276,8 @@ fun SnippetCard(
     snippet: SnippetEntity,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
+    isPinned: Boolean = false,
+    onQuickShare: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -296,13 +302,25 @@ fun SnippetCard(
                 )
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(
-                        snippet.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isPinned) {
+                            Icon(
+                                Icons.Rounded.PushPin,
+                                contentDescription = S.pinnedHeader,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .padding(end = 6.dp)
+                                    .size(16.dp)
+                            )
+                        }
+                        Text(
+                            snippet.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                     Text(
                         "${snippet.language} · ${formatSize(snippet.sizeBytes)} · ${S.lines(snippet.lineCount)}",
                         style = MaterialTheme.typography.bodySmall,
@@ -310,11 +328,26 @@ fun SnippetCard(
                     )
                 }
                 Spacer(Modifier.width(8.dp))
-                Text(
-                    relativeTime(snippet.updatedAt, S),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        relativeTime(snippet.updatedAt, S),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (onQuickShare != null) {
+                        IconButton(
+                            onClick = onQuickShare,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Rounded.Share,
+                                contentDescription = S.share,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
             }
             if (snippet.preview.isNotBlank()) {
                 Surface(
@@ -342,6 +375,8 @@ fun SnippetGridCard(
     snippet: SnippetEntity,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
+    isPinned: Boolean = false,
+    onQuickShare: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -368,14 +403,34 @@ fun SnippetGridCard(
                     size = 36.dp,
                     shapeRadius = 10.dp
                 )
-                Text(
-                    relativeTime(snippet.updatedAt, S),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isPinned) {
+                        Icon(
+                            Icons.Rounded.PushPin,
+                            contentDescription = S.pinnedHeader,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .padding(end = 4.dp)
+                                .size(14.dp)
+                        )
+                    }
+                    if (onQuickShare != null) {
+                        IconButton(
+                            onClick = onQuickShare,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                Icons.Rounded.Share,
+                                contentDescription = S.share,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
+                    }
+                }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(8.dp))
 
             Text(
                 snippet.title,
@@ -385,13 +440,25 @@ fun SnippetGridCard(
                 overflow = TextOverflow.Ellipsis
             )
 
-            Text(
-                "${snippet.language} · ${formatSize(snippet.sizeBytes)}",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "${snippet.language} · ${formatSize(snippet.sizeBytes)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                Text(
+                    relativeTime(snippet.updatedAt, S),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             if (snippet.preview.isNotBlank()) {
                 Surface(

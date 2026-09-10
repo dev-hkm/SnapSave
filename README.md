@@ -73,7 +73,7 @@ Built simply and cleanly with modern Android libraries:
 
 Grab the signed release APK from the [Releases](https://github.com/dev-hkm/SnapSave/releases) page:
 
-👉 **[Download Latest Release (v1.0.10)](https://github.com/dev-hkm/SnapSave/releases/tag/v1.0.10)**
+👉 **[Download Latest Release (v1.0.12)](https://github.com/dev-hkm/SnapSave/releases/tag/v1.0.12)**
 
 Works on Android 8.0 (API 26) up to Android 15 (API 35).
 
