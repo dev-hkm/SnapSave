@@ -104,6 +104,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun QuickSaveSheet(
     initialText: String,
+    initialTitle: String? = null,
+    initialExtension: String? = null,
     onFinished: () -> Unit,
     vm: QuickSaveViewModel = viewModel(factory = QuickSaveViewModel.Factory)
 ) {
@@ -118,9 +120,18 @@ fun QuickSaveSheet(
     val detected by produceState<CodeLanguage?>(initialValue = null, initialText) {
         value = withContext(Dispatchers.Default) { LanguageDetector.detect(initialText) }
     }
-    var manual by remember { mutableStateOf<CodeLanguage?>(null) }
-    var customExtension by rememberSaveable { mutableStateOf<String?>(null) }
-    var title by rememberSaveable { mutableStateOf("") }
+    val initialLang = remember(initialExtension) {
+        if (!initialExtension.isNullOrBlank()) {
+            CodeLanguage.fromExtension(initialExtension)
+        } else null
+    }
+    var manual by remember { mutableStateOf<CodeLanguage?>(initialLang) }
+    var customExtension by rememberSaveable {
+        mutableStateOf<String?>(
+            if (initialLang == null && !initialExtension.isNullOrBlank()) initialExtension else null
+        )
+    }
+    var title by rememberSaveable { mutableStateOf(initialTitle.orEmpty()) }
 
     val storageSettings by vm.storageSettings.collectAsStateWithLifecycle()
     val customExtensions by vm.customExtensions.collectAsStateWithLifecycle()

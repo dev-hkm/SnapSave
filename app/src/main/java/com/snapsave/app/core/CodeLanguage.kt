@@ -30,6 +30,9 @@ enum class CodeLanguage(val extension: String, val label: String) {
         val common: List<CodeLanguage> = listOf(
             HTML, KOTLIN, JAVA, PYTHON, JAVASCRIPT, TYPESCRIPT, CSS, JSON, SQL, MARKDOWN, PLAIN
         )
+
+        fun fromExtension(ext: String): CodeLanguage? =
+            entries.firstOrNull { it.extension.equals(ext.trim().removePrefix("."), ignoreCase = true) }
     }
 }
 

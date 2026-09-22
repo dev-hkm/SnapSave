@@ -31,6 +31,19 @@ internal class OverlaySnippetAdapter(
     private val onLongClick: ((View, SnippetEntity) -> Unit)? = null
 ) : RecyclerView.Adapter<OverlaySnippetAdapter.Holder>() {
 
+    var isGrid: Boolean = true
+        set(value) {
+            if (field != value) {
+                field = value
+                notifyDataSetChanged()
+            }
+        }
+
+    companion object {
+        const val VIEW_TYPE_LIST = 0
+        const val VIEW_TYPE_GRID = 1
+    }
+
     private var snippets = emptyList<SnippetEntity>()
     private var submitGeneration = 0L
 
@@ -45,7 +58,7 @@ internal class OverlaySnippetAdapter(
         val langBadge: TextView,
         val metaView: TextView,
         val previewView: TextView,
-        val copyIcon: ImageView
+        val copyIcon: ImageView?
     ) : RecyclerView.ViewHolder(frame) {
         var snippet: SnippetEntity? = null
     }
@@ -54,6 +67,9 @@ internal class OverlaySnippetAdapter(
 
     override fun getItemId(position: Int): Long =
         snippets.getOrNull(position)?.id ?: RecyclerView.NO_ID
+
+    override fun getItemViewType(position: Int): Int =
+        if (isGrid) VIEW_TYPE_GRID else VIEW_TYPE_LIST
 
     fun submit(items: List<SnippetEntity>, force: Boolean = false) {
         val generation = ++submitGeneration
@@ -106,6 +122,149 @@ internal class OverlaySnippetAdapter(
             )
         }
 
+        if (viewType == VIEW_TYPE_GRID) {
+            // Compact Grid Card (2-column layout)
+            val frame = FrameLayout(context).apply {
+                isClickable = true
+                isFocusable = true
+                background = cardBg
+                elevation = (5f * shadowStrength * density).coerceAtLeast(0f)
+                val pad = (9 * density).toInt()
+                setPadding(pad, pad, pad, pad)
+                val lp = RecyclerView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    val marginH = (3 * density).toInt()
+                    val marginV = (3 * density).toInt()
+                    setMargins(marginH, marginV, marginH, marginV)
+                }
+                layoutParams = lp
+            }
+
+            val container = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            // Top Row: Lang badge + Line count
+            val topRow = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(0, 0, 0, (4 * density).toInt())
+                }
+            }
+
+            val langBadge = TextView(context).apply {
+                textSize = 9.5f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(palette.selectedChipContentColor)
+                val badgeBg = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 6 * density
+                    setColor(palette.primaryColor)
+                }
+                background = badgeBg
+                val pH = (6 * density).toInt()
+                val pV = (2 * density).toInt()
+                setPadding(pH, pV, pH, pV)
+            }
+
+            val metaView = TextView(context).apply {
+                textSize = 9.5f
+                setTextColor(palette.mutedTextColor)
+                gravity = Gravity.END
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            }
+
+            topRow.addView(langBadge)
+            topRow.addView(metaView)
+            container.addView(topRow)
+
+            // Title View (Bold, 1 line truncate)
+            val titleView = TextView(context).apply {
+                textSize = 12f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(palette.textColor)
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(0, 0, 0, (4 * density).toInt())
+                }
+            }
+            container.addView(titleView)
+
+            // Monospace Preview Box (compact 2 lines)
+            val previewContainer = FrameLayout(context).apply {
+                val bg = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 8 * density
+                    setColor(withAlpha(palette.surfaceVariantColor, if (palette.isDark) 140 else 200))
+                }
+                background = bg
+                val p = (5 * density).toInt()
+                setPadding(p, p, p, p)
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            val previewView = TextView(context).apply {
+                typeface = Typeface.MONOSPACE
+                textSize = 10f
+                setTextColor(if (palette.isDark) Color.parseColor("#E0E3EC") else Color.parseColor("#2E333D"))
+                maxLines = 2
+                ellipsize = TextUtils.TruncateAt.END
+                layoutParams = FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+            }
+            previewContainer.addView(previewView)
+            container.addView(previewContainer)
+
+            frame.addView(container)
+
+            val holder = Holder(frame, cardBg, titleView, langBadge, metaView, previewView, null)
+
+            frame.setOnClickListener {
+                holder.snippet?.let { onSelected(frame, it) }
+            }
+
+            frame.setOnLongClickListener {
+                holder.snippet?.let { snippet ->
+                    onLongClick?.invoke(frame, snippet)
+                }
+                true
+            }
+
+            frame.setOnTouchListener { view, event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> view.animate().scaleX(0.96f).scaleY(0.96f).setDuration(80).start()
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> view.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+                }
+                false
+            }
+
+            return holder
+        }
+
+        // Full-width List Card
         val frame = FrameLayout(context).apply {
             isClickable = true
             isFocusable = true
@@ -275,7 +434,11 @@ internal class OverlaySnippetAdapter(
 
         holder.titleView.text = snippet.title
         holder.langBadge.text = snippet.extension.uppercase().ifBlank { snippet.language.uppercase() }
-        holder.metaView.text = "${snippet.lineCount} dòng · ${formatSize(snippet.sizeBytes)}"
+        if (isGrid) {
+            holder.metaView.text = "${snippet.lineCount}L"
+        } else {
+            holder.metaView.text = "${snippet.lineCount} dòng · ${formatSize(snippet.sizeBytes)}"
+        }
         holder.previewView.text = snippet.preview.trim().ifBlank { "(Snippet trống)" }
     }
 }

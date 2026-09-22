@@ -86,13 +86,18 @@ class SnippetOverlayService : Service() {
     private var panelSurfaceView: View? = null
     private var panelBg: GradientDrawable? = null
 
+    private var panelContent: LinearLayout? = null
     private var chromeContainer: LinearLayout? = null
     private var panelHeaderView: LinearLayout? = null
     private var panelTitleView: TextView? = null
+    private var searchBoxContainer: LinearLayout? = null
     private var searchEditText: EditText? = null
+    private var searchClearBtn: ImageView? = null
     private var searchBg: GradientDrawable? = null
     private var categoryScrollView: HorizontalScrollView? = null
     private var chipsContainer: LinearLayout? = null
+    private var isGridMode = true
+    private var gridToggleBtnView: ImageView? = null
 
     private var snippetRecyclerView: androidx.recyclerview.widget.RecyclerView? = null
     private var snippetAdapter: OverlaySnippetAdapter? = null
@@ -369,6 +374,47 @@ class SnippetOverlayService : Service() {
         }
     }
 
+    private fun syncSearchRow(showSearch: Boolean) {
+        if (showSearch) return
+        searchDebounceJob?.cancel()
+        searchDebounceJob = null
+        searchQuery = ""
+        val box = searchEditText
+        if (box != null && box.text.isNotEmpty()) {
+            box.setText("")
+        }
+        searchClearBtn?.visibility = View.GONE
+    }
+
+    private fun updateLayoutManager() {
+        val recycler = snippetRecyclerView ?: return
+        val density = resources.displayMetrics.density
+        val panelW = if (::panelParams.isInitialized) panelParams.width else (SnippetOverlayLayoutPolicy.DEFAULT_PANEL_WIDTH_DP * density).toInt()
+        isGridMode = SnippetOverlayPreferences.isGridView(this)
+        if (isGridMode) {
+            val cols = if (panelW >= 400 * density) 3 else 2
+            val currentLm = recycler.layoutManager
+            if (currentLm is androidx.recyclerview.widget.GridLayoutManager) {
+                currentLm.spanCount = cols
+            } else {
+                recycler.layoutManager = androidx.recyclerview.widget.GridLayoutManager(this, cols)
+            }
+        } else {
+            val currentLm = recycler.layoutManager
+            if (currentLm !is androidx.recyclerview.widget.LinearLayoutManager || currentLm is androidx.recyclerview.widget.GridLayoutManager) {
+                recycler.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+            }
+        }
+        snippetAdapter?.isGrid = isGridMode
+        snippetAdapter?.notifyDataSetChanged()
+        gridToggleBtnView?.setImageDrawable(
+            ContextCompat.getDrawable(
+                this,
+                if (isGridMode) R.drawable.ic_overlay_list else R.drawable.ic_overlay_grid
+            )
+        )
+    }
+
     private fun refreshOverlayConfiguration() {
         val density = resources.displayMetrics.density
         val palette = currentPalette()
@@ -396,10 +442,35 @@ class SnippetOverlayService : Service() {
 
         panelHeaderView?.visibility = if (showTitle) View.VISIBLE else View.GONE
         panelTitleView?.visibility = if (showTitle) View.VISIBLE else View.GONE
-        searchEditText?.visibility = if (showSearch) View.VISIBLE else View.GONE
+        searchBoxContainer?.visibility = if (showSearch) View.VISIBLE else View.GONE
         categoryScrollView?.visibility = if (showCategories) View.VISIBLE else View.GONE
 
+        syncSearchRow(showSearch)
+
+        panelContent?.let { content ->
+            val isGridOnly = !showTitle && !showSearch && !showCategories
+            val outerPad = if (isGridOnly) (4 * density).toInt() else (6 * density).toInt()
+            val topPad = if (!showTitle && !showSearch && !showCategories) {
+                (20 * density).toInt()
+            } else if (!showTitle && !showSearch) {
+                (14 * density).toInt()
+            } else if (!showTitle) {
+                (10 * density).toInt()
+            } else {
+                (4 * density).toInt()
+            }
+            content.setPadding(outerPad, topPad, outerPad, (10 * density).toInt())
+        }
+
+        updateLayoutManager()
         updateOverlayAppearance()
+
+        panelRoot?.let { panel ->
+            if (panel.isAttachedToWindow && ::panelParams.isInitialized) {
+                windowManager.updateViewLayout(panel, panelParams)
+            }
+        }
+        updateCloseOverlayLayout()
     }
 
     private fun reflowOverlayViews() {
@@ -695,6 +766,17 @@ class SnippetOverlayService : Service() {
         root.addView(surfaceLayer)
 
         // 3. Layer 2: Panel Content LinearLayout
+        val isGridOnly = !showTitle && !showSearch && !showCategories
+        val outerPad = if (isGridOnly) (4 * density).toInt() else (6 * density).toInt()
+        val topPad = if (!showTitle && !showSearch && !showCategories) {
+            (20 * density).toInt()
+        } else if (!showTitle && !showSearch) {
+            (14 * density).toInt()
+        } else if (!showTitle) {
+            (10 * density).toInt()
+        } else {
+            (4 * density).toInt()
+        }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = FrameLayout.LayoutParams(
@@ -702,10 +784,9 @@ class SnippetOverlayService : Service() {
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
             elevation = 12f
-            val outerPad = (6 * density).toInt()
-            val topPad = (4 * density).toInt()
-            setPadding(outerPad, topPad, outerPad, outerPad)
+            setPadding(outerPad, topPad, outerPad, (10 * density).toInt())
         }
+        panelContent = content
 
         // Chrome Container (Header, Search, Categories)
         val chrome = LinearLayout(this).apply {
@@ -786,6 +867,34 @@ class SnippetOverlayService : Service() {
         panelTitleView = title
         header.addView(title)
 
+        // Grid / List View Toggle Button
+        isGridMode = SnippetOverlayPreferences.isGridView(this)
+        val gridToggleBtn = ImageView(this).apply {
+            val s = (28 * density).toInt()
+            val pad = (5 * density).toInt()
+            setPadding(pad, pad, pad, pad)
+            val btnBg = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(withAlpha(palette.surfaceVariantColor, if (palette.isDark) 140 else 200))
+            }
+            background = btnBg
+            setImageDrawable(ContextCompat.getDrawable(this@SnippetOverlayService, if (isGridMode) R.drawable.ic_overlay_list else R.drawable.ic_overlay_grid))
+            setColorFilter(palette.textColor)
+            layoutParams = LinearLayout.LayoutParams(s, s).apply {
+                setMargins(0, 0, (8 * density).toInt(), 0)
+            }
+            contentDescription = "Chuyển chế độ xem lưới / danh sách"
+            setOnClickListener {
+                it.haptic(HapticKind.CLICK)
+                isGridMode = !isGridMode
+                SnippetOverlayPreferences.setIsGridView(this@SnippetOverlayService, isGridMode)
+                setImageDrawable(ContextCompat.getDrawable(this@SnippetOverlayService, if (isGridMode) R.drawable.ic_overlay_list else R.drawable.ic_overlay_grid))
+                updateLayoutManager()
+            }
+        }
+        gridToggleBtnView = gridToggleBtn
+        header.addView(gridToggleBtn)
+
         // Save Clipboard Button in Header
         val saveClipboardBtn = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -825,13 +934,10 @@ class SnippetOverlayService : Service() {
         header.addView(saveClipboardBtn)
         chrome.addView(header)
 
-        // B. Search Box (~38dp, bo tròn 14dp)
-        val search = EditText(this).apply {
-            hint = "Tìm snippet, nội dung, ngôn ngữ…"
-            setHintTextColor(withAlpha(palette.mutedTextColor, 160))
-            setTextColor(palette.textColor)
-            textSize = 12.5f
-            setSingleLine(true)
+        // B. Search Box Container (~38dp, bo tròn 14dp, search icon + input + clear button)
+        val searchContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
             val sBg = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = 14 * density
@@ -839,8 +945,8 @@ class SnippetOverlayService : Service() {
             }
             searchBg = sBg
             background = sBg
-            val pH = (12 * density).toInt()
-            val pV = (6 * density).toInt()
+            val pH = (10 * density).toInt()
+            val pV = (4 * density).toInt()
             setPadding(pH, pV, pH, pV)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -849,14 +955,42 @@ class SnippetOverlayService : Service() {
                 setMargins((4 * density).toInt(), (2 * density).toInt(), (4 * density).toInt(), (6 * density).toInt())
             }
             visibility = if (showSearch) View.VISIBLE else View.GONE
+        }
+        searchBoxContainer = searchContainer
+
+        val searchIcon = ImageView(this).apply {
+            setImageDrawable(ContextCompat.getDrawable(this@SnippetOverlayService, R.drawable.ic_overlay_search))
+            setColorFilter(withAlpha(palette.mutedTextColor, 180))
+            val s = (16 * density).toInt()
+            layoutParams = LinearLayout.LayoutParams(s, s).apply {
+                setMargins(0, 0, (8 * density).toInt(), 0)
+            }
+        }
+        searchContainer.addView(searchIcon)
+
+        val search = EditText(this).apply {
+            hint = "Tìm snippet, nội dung, ngôn ngữ…"
+            setHintTextColor(withAlpha(palette.mutedTextColor, 160))
+            setTextColor(palette.textColor)
+            textSize = 12.5f
+            setSingleLine(true)
+            background = null
+            setPadding(0, 0, 0, 0)
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                1f
+            )
 
             addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    val q = s?.toString()?.trim()?.lowercase().orEmpty()
+                    searchClearBtn?.visibility = if (q.isNotEmpty()) View.VISIBLE else View.GONE
                     searchDebounceJob?.cancel()
                     searchDebounceJob = serviceScope.launch {
                         delay(200)
-                        searchQuery = s?.toString()?.trim()?.lowercase().orEmpty()
+                        searchQuery = q
                         filterAndSubmitSnippets()
                     }
                 }
@@ -864,7 +998,28 @@ class SnippetOverlayService : Service() {
             })
         }
         searchEditText = search
-        chrome.addView(search)
+        searchContainer.addView(search)
+
+        val clearBtn = ImageView(this).apply {
+            setImageDrawable(ContextCompat.getDrawable(this@SnippetOverlayService, R.drawable.ic_overlay_close))
+            setColorFilter(palette.mutedTextColor)
+            val s = (18 * density).toInt()
+            val pad = (2 * density).toInt()
+            setPadding(pad, pad, pad, pad)
+            layoutParams = LinearLayout.LayoutParams(s, s).apply {
+                setMargins((4 * density).toInt(), 0, 0, 0)
+            }
+            visibility = View.GONE
+            setOnClickListener {
+                it.haptic(HapticKind.CLICK)
+                search.setText("")
+                searchQuery = ""
+                filterAndSubmitSnippets()
+            }
+        }
+        searchClearBtn = clearBtn
+        searchContainer.addView(clearBtn)
+        chrome.addView(searchContainer)
 
         // C. Category Chips (Thanh cuộn ngang, bo góc dạng pill 18dp)
         val chipsScroll = HorizontalScrollView(this).apply {
@@ -890,7 +1045,6 @@ class SnippetOverlayService : Service() {
 
         // D. Snippets RecyclerView
         val recycler = androidx.recyclerview.widget.RecyclerView(this).apply {
-            layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this@SnippetOverlayService)
             setHasFixedSize(true)
             setItemViewCacheSize(20)
             layoutParams = LinearLayout.LayoutParams(
@@ -908,8 +1062,41 @@ class SnippetOverlayService : Service() {
             onLongClick = { view, snippet -> onSnippetLongClick(view, snippet) }
         ).also { recycler.adapter = it }
         content.addView(recycler)
+        updateLayoutManager()
 
         root.addView(content)
+
+        // Allow dragging from the top rim of panel if title is hidden
+        var rimDragActive = false
+        root.setOnTouchListener { _, event ->
+            val showTitleNow = SnippetOverlayPreferences.showTitle(this@SnippetOverlayService)
+            if (!showTitleNow) {
+                val topRimHeight = (26 * density).toInt()
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        rimDragActive = event.y <= topRimHeight
+                        if (rimDragActive) {
+                            panelDragListener.onTouch(root, event)
+                        } else false
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        if (rimDragActive) {
+                            panelDragListener.onTouch(root, event)
+                        } else false
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        if (rimDragActive) {
+                            rimDragActive = false
+                            panelDragListener.onTouch(root, event)
+                        } else false
+                    }
+                    else -> false
+                }
+            } else {
+                rimDragActive = false
+                false
+            }
+        }
 
         // Empty state view
         val emptyView = TextView(this).apply {
@@ -921,13 +1108,14 @@ class SnippetOverlayService : Service() {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
-            elevation = 12f
             visibility = View.GONE
         }
         emptyStateTextView = emptyView
         root.addView(emptyView)
 
-        // 3. Layer 2: Floating Controls (Close Button & Resize Handle)
+        // 4. Layer 3: Floating Controls Overlaying the Popup Edges
+
+        // Top-End Close Button (Tap closes, Hold and drag moves popup)
         val closeBtn = ImageView(this).apply {
             setImageDrawable(ContextCompat.getDrawable(this@SnippetOverlayService, R.drawable.ic_overlay_close))
             setColorFilter(palette.textColor)
@@ -936,12 +1124,12 @@ class SnippetOverlayService : Service() {
             setPadding(pad, pad, pad, pad)
             val btnBg = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(withAlpha(palette.surfaceColor, if (palette.isDark) 200 else 230))
-                setStroke((1 * density).toInt(), withAlpha(palette.outlineColor, if (palette.isDark) 70 else 80))
+                setColor(withAlpha(palette.surfaceColor, if (palette.isDark) 200 else 220))
+                setStroke((1 * density).toInt(), withAlpha(palette.outlineColor, if (palette.isDark) 60 else 70))
             }
             closeBtnBg = btnBg
             background = btnBg
-            contentDescription = "Close popup. Hold and drag to move."
+            contentDescription = "Đóng popup. Nhấn giữ để di chuyển"
             elevation = 14f
             closeOverlaySizePx = btnSize
         }
@@ -980,7 +1168,7 @@ class SnippetOverlayService : Service() {
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = (event.rawX - closeInitialTouchX).toInt()
-                    val dy = (event.rawY - initialTouchPanelY).toInt()
+                    val dy = (event.rawY - closeInitialTouchY).toInt()
                     if (!movingFromClose && (abs(dx) > touchSlop || abs(dy) > touchSlop)) {
                         closeGestureCancelled = true
                         view.removeCallbacks(closeLongPress)
@@ -1090,6 +1278,10 @@ class SnippetOverlayService : Service() {
                     panelParams.height = clamped.height
                     panelParams.x = clamped.x
                     panelParams.y = clamped.y
+                    if (isGridMode) {
+                        val liveCols = if (clamped.width >= 400 * density) 3 else 2
+                        (snippetRecyclerView?.layoutManager as? androidx.recyclerview.widget.GridLayoutManager)?.spanCount = liveCols
+                    }
                     windowManager.updateViewLayout(root, panelParams)
                     updateCloseOverlayLayout()
                     true
@@ -1149,6 +1341,35 @@ class SnippetOverlayService : Service() {
             panelState = PanelLifecycleState.OPENING
             isPanelOpen = true
             panel.animate().cancel()
+
+            // Single source of truth: re-sync chrome visibility from preferences on EVERY open
+            val openShowTitle = SnippetOverlayPreferences.showTitle(this)
+            val openShowSearch = SnippetOverlayPreferences.showSearch(this)
+            val openShowCategories = SnippetOverlayPreferences.showCategories(this)
+            panelHeaderView?.visibility = if (openShowTitle) View.VISIBLE else View.GONE
+            panelTitleView?.visibility = if (openShowTitle) View.VISIBLE else View.GONE
+            searchBoxContainer?.visibility = if (openShowSearch) View.VISIBLE else View.GONE
+            categoryScrollView?.visibility = if (openShowCategories) View.VISIBLE else View.GONE
+            syncSearchRow(openShowSearch)
+
+            val density = resources.displayMetrics.density
+            panelContent?.let { content ->
+                val isGridOnly = !openShowTitle && !openShowSearch && !openShowCategories
+                val outerPad = if (isGridOnly) (4 * density).toInt() else (6 * density).toInt()
+                val topPad = if (!openShowTitle && !openShowSearch && !openShowCategories) {
+                    (20 * density).toInt()
+                } else if (!openShowTitle && !openShowSearch) {
+                    (14 * density).toInt()
+                } else if (!openShowTitle) {
+                    (10 * density).toInt()
+                } else {
+                    (4 * density).toInt()
+                }
+                content.setPadding(outerPad, topPad, outerPad, (10 * density).toInt())
+            }
+
+            isGridMode = SnippetOverlayPreferences.isGridView(this)
+            updateLayoutManager()
 
             // Resolve start filter mode on open
             resolveStartFilterOnOpen()

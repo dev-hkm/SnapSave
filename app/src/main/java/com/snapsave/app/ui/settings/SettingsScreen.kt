@@ -133,6 +133,7 @@ fun SettingsScreen(
     var showQuickTitle by remember { mutableStateOf(SnippetOverlayPreferences.showTitle(context)) }
     var showQuickSearch by remember { mutableStateOf(SnippetOverlayPreferences.showSearch(context)) }
     var showQuickCategories by remember { mutableStateOf(SnippetOverlayPreferences.showCategories(context)) }
+    var isGridView by remember { mutableStateOf(SnippetOverlayPreferences.isGridView(context)) }
 
     var startFilterMode by remember { mutableStateOf(SnippetOverlayPreferences.startFilterMode(context)) }
     var afterCopyAction by remember { mutableStateOf(SnippetOverlayPreferences.afterCopyAction(context)) }
@@ -502,10 +503,9 @@ fun SettingsScreen(
                     }
                 }
 
-                if (isOverlayRunning && hasOverlayPermission) {
-                    Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(8.dp))
 
-                    // 4A. Presets Section
+                // 4A. Presets Section
                     Text(
                         text = s.overlayPresets,
                         style = MaterialTheme.typography.titleSmall,
@@ -851,8 +851,57 @@ fun SettingsScreen(
                             sendRefreshConfiguration()
                         }
                     )
+
+                    Spacer(Modifier.height(4.dp))
+
+                    Text(
+                        text = s.overlayViewLayout,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        SegmentedButton(
+                            selected = isGridView,
+                            onClick = {
+                                view.haptic(HapticKind.TICK)
+                                isGridView = true
+                                SnippetOverlayPreferences.setIsGridView(context, true)
+                                sendRefreshConfiguration()
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Rounded.GridView,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        ) {
+                            Text(s.overlayViewLayoutGrid)
+                        }
+                        SegmentedButton(
+                            selected = !isGridView,
+                            onClick = {
+                                view.haptic(HapticKind.TICK)
+                                isGridView = false
+                                SnippetOverlayPreferences.setIsGridView(context, false)
+                                sendRefreshConfiguration()
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Rounded.ViewAgenda,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        ) {
+                            Text(s.overlayViewLayoutList)
+                        }
+                    }
                 }
-            }
 
             // 5. Data & Storage
             SettingsGroup(title = s.dataGroupTitle) {

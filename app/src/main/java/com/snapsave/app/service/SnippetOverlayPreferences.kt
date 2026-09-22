@@ -314,6 +314,19 @@ object SnippetOverlayPreferences {
             .apply()
     }
 
+    private const val KEY_IS_GRID_VIEW = "popup_is_grid_view"
+
+    fun isGridView(context: Context): Boolean = context
+        .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .getBoolean(KEY_IS_GRID_VIEW, true)
+
+    fun setIsGridView(context: Context, isGrid: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_IS_GRID_VIEW, isGrid)
+            .apply()
+    }
+
     // --- Start Filter ---
 
     fun startFilterMode(context: Context): OverlayStartFilterMode {

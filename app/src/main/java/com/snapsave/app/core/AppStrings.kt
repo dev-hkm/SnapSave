@@ -227,6 +227,9 @@ interface AppStrings {
     val overlayShowSearchSubtitle: String
     val overlayShowCategories: String
     val overlayShowCategoriesSubtitle: String
+    val overlayViewLayout: String
+    val overlayViewLayoutGrid: String
+    val overlayViewLayoutList: String
     val overlayGrantPermission: String
     val overlayPermissionGranted: String
     fun overlayVisiblePercent(percent: Int): String
@@ -465,6 +468,9 @@ object StringsEn : AppStrings {
     override val overlayShowSearchSubtitle = "Display search input in quick snippets"
     override val overlayShowCategories = "Show categories in popup"
     override val overlayShowCategoriesSubtitle = "Display language tabs in quick snippets"
+    override val overlayViewLayout = "Popup display layout"
+    override val overlayViewLayoutGrid = "Grid"
+    override val overlayViewLayoutList = "List"
     override val overlayGrantPermission = "Grant"
     override val overlayPermissionGranted = "Permission granted"
     override fun overlayVisiblePercent(percent: Int) = "$percent% visible"
@@ -701,6 +707,9 @@ object StringsVi : AppStrings {
     override val overlayShowSearchSubtitle = "Hiển thị ô nhập tìm kiếm nhanh trong popup"
     override val overlayShowCategories = "Hiện danh mục trong popup"
     override val overlayShowCategoriesSubtitle = "Hiển thị các chip lọc ngôn ngữ trong popup"
+    override val overlayViewLayout = "Bố cục hiển thị popup"
+    override val overlayViewLayoutGrid = "Dạng lưới"
+    override val overlayViewLayoutList = "Danh sách"
     override val overlayGrantPermission = "Cấp quyền"
     override val overlayPermissionGranted = "Đã cấp quyền"
     override fun overlayVisiblePercent(percent: Int) = "$percent% hiển thị"

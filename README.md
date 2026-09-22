@@ -45,6 +45,8 @@ You can also send text through the normal Android **Share** menu (`ACTION_SEND`)
 
 ## What's Inside
 
+- **Quick Access Floating Popup**: Inspired by StickHub with 100% gesture parity — floating bubble, multi-layer opacity presets, responsive Grid and List layouts, real-time column resizing, quick search, and language tabs.
+- **Universal File Sharing & Open With**: Share files directly from any file manager, browser, or messenger via Android Share (`*/*`) or launch directly with "Open With" to view, customize, and save.
 - **Zero-clipboard capture**: Uses `ACTION_PROCESS_TEXT` so huge text blocks are passed directly via Intent, completely intact.
 - **Auto syntax detection**: Guesses between 20+ file formats (JSON parser test, HTML tag checks, code keyword heuristics).
 - **Official VS Code Material Icons**: Real file type icons from Material Icon Theme, not generic placeholders.
@@ -62,9 +64,10 @@ Built simply and cleanly with modern Android libraries:
 
 - **Language**: Kotlin 2.0.21
 - **UI**: Jetpack Compose + Material 3 (Edge-to-Edge, dynamic theming)
+- **Overlay**: System Alert Window, WindowManager, Dynamic Material 3 surfaces & gestures
 - **Database**: Room (KSP) + Kotlin Coroutines / Flow
 - **Settings**: Jetpack DataStore Preferences
-- **System**: `ACTION_PROCESS_TEXT`, `ACTION_SEND`, `FileProvider`, `MediaStore`
+- **System**: `ACTION_PROCESS_TEXT`, `ACTION_SEND` (`*/*`), `ACTION_VIEW`, `FileProvider`, `MediaStore`
 - **DI**: Manual container (AppContainer) to keep compile times fast and the APK small (~14MB)
 
 ---
@@ -73,7 +76,7 @@ Built simply and cleanly with modern Android libraries:
 
 Grab the signed release APK from the [Releases](https://github.com/dev-hkm/SnapSave/releases) page:
 
-👉 **[Download Latest Release (v1.0.12)](https://github.com/dev-hkm/SnapSave/releases/tag/v1.0.12)**
+👉 **[Download Latest Release (v1.0.16)](https://github.com/dev-hkm/SnapSave/releases/tag/v1.0.16)**
 
 Works on Android 8.0 (API 26) up to Android 15 (API 35).
 
