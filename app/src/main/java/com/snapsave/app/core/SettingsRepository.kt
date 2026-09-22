@@ -68,6 +68,8 @@ class SettingsRepository(private val context: Context) {
         val IS_GRID_VIEW = booleanPreferencesKey("is_grid_view")
         val SORT_ORDER = intPreferencesKey("sort_order")
         val PINNED_IDS = stringSetPreferencesKey("pinned_ids")
+        val CUSTOM_EXTENSIONS = stringSetPreferencesKey("custom_extensions")
+        val RECENT_EXTENSIONS = stringPreferencesKey("recent_extensions_csv")
     }
 
     init {
@@ -155,6 +157,66 @@ class SettingsRepository(private val context: Context) {
         context.dataStore.edit {
             if (uri == null) it.remove(Keys.CUSTOM_FOLDER_URI) else it[Keys.CUSTOM_FOLDER_URI] = uri
             if (name == null) it.remove(Keys.CUSTOM_FOLDER_NAME) else it[Keys.CUSTOM_FOLDER_NAME] = name
+        }
+    }
+
+    val customExtensions: Flow<Set<String>> = context.dataStore.data.map { p ->
+        p[Keys.CUSTOM_EXTENSIONS] ?: emptySet()
+    }
+
+    val recentExtensions: Flow<List<String>> = context.dataStore.data.map { p ->
+        p[Keys.RECENT_EXTENSIONS]
+            ?.split(",")
+            ?.map { it.trim().lowercase() }
+            ?.filter { it.isNotBlank() }
+            ?: emptyList()
+    }
+
+    suspend fun addCustomExtension(ext: String) {
+        val clean = ext.trim().removePrefix(".").lowercase()
+        if (clean.isBlank()) return
+        context.dataStore.edit { p ->
+            val current = p[Keys.CUSTOM_EXTENSIONS]?.toMutableSet() ?: mutableSetOf()
+            current.add(clean)
+            p[Keys.CUSTOM_EXTENSIONS] = current
+
+            val recents = p[Keys.RECENT_EXTENSIONS]
+                ?.split(",")
+                ?.map { it.trim().lowercase() }
+                ?.filter { it.isNotBlank() }
+                ?: emptyList()
+            val updated = (listOf(clean) + recents.filter { it != clean }).take(20).joinToString(",")
+            p[Keys.RECENT_EXTENSIONS] = updated
+        }
+    }
+
+    suspend fun recordRecentExtension(ext: String) {
+        val clean = ext.trim().removePrefix(".").lowercase()
+        if (clean.isBlank()) return
+        context.dataStore.edit { p ->
+            val recents = p[Keys.RECENT_EXTENSIONS]
+                ?.split(",")
+                ?.map { it.trim().lowercase() }
+                ?.filter { it.isNotBlank() }
+                ?: emptyList()
+            val updated = (listOf(clean) + recents.filter { it != clean }).take(20).joinToString(",")
+            p[Keys.RECENT_EXTENSIONS] = updated
+        }
+    }
+
+    suspend fun removeCustomExtension(ext: String) {
+        val clean = ext.trim().removePrefix(".").lowercase()
+        context.dataStore.edit { p ->
+            val current = p[Keys.CUSTOM_EXTENSIONS]?.toMutableSet() ?: mutableSetOf()
+            current.remove(clean)
+            p[Keys.CUSTOM_EXTENSIONS] = current
+
+            val recents = p[Keys.RECENT_EXTENSIONS]
+                ?.split(",")
+                ?.map { it.trim().lowercase() }
+                ?.filter { it.isNotBlank() && it != clean }
+                ?: emptyList()
+            p[Keys.RECENT_EXTENSIONS] = recents.joinToString(",")
         }
     }
 }

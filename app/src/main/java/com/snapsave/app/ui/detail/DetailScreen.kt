@@ -84,7 +84,7 @@ import com.snapsave.app.core.formatSize
 import com.snapsave.app.core.haptic
 import com.snapsave.app.ui.components.LanguageBadge
 import com.snapsave.app.ui.components.LoadingBox
-import com.snapsave.app.ui.components.languageTint
+import com.snapsave.app.ui.components.adaptiveLanguageTint
 import com.snapsave.app.ui.components.pressScale
 import kotlinx.coroutines.launch
 
@@ -248,7 +248,7 @@ fun DetailScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                LanguageBadge(extension = e.extension, language = e.language, tint = languageTint(e.language))
+                LanguageBadge(extension = e.extension, language = e.language, tint = adaptiveLanguageTint(e.language))
                 MetaChip(icon = Icons.Rounded.CalendarMonth, label = formatDateTime(e.createdAt))
                 MetaChip(icon = Icons.Rounded.FormatListNumbered, label = s.lines(e.lineCount))
                 MetaChip(icon = Icons.Rounded.Storage, label = formatSize(e.sizeBytes))

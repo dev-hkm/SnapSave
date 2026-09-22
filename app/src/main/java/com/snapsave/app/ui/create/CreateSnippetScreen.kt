@@ -69,7 +69,7 @@ import com.snapsave.app.core.haptic
 import com.snapsave.app.ui.components.LanguageBadge
 import com.snapsave.app.ui.components.LanguageIconBox
 import com.snapsave.app.ui.components.LanguagePickerRow
-import com.snapsave.app.ui.components.languageTint
+import com.snapsave.app.ui.components.adaptiveLanguageTint
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +82,8 @@ fun CreateSnippetScreen(
     val view = LocalView.current
     val context = LocalContext.current
     val storageSettings by vm.storageSettings.collectAsStateWithLifecycle()
+    val customExtensions by vm.customExtensions.collectAsStateWithLifecycle()
+    val recentExtensions by vm.recentExtensions.collectAsStateWithLifecycle()
     val currentTarget = vm.targetOverride ?: storageSettings.quickSaveTarget
 
     val folderPicker = rememberLauncherForActivityResult(
@@ -107,7 +109,7 @@ fun CreateSnippetScreen(
     val lang = vm.effectiveLanguage
     val effectiveExt = vm.customExtension ?: lang.extension
     val effectiveLabel = if (!vm.customExtension.isNullOrBlank()) vm.customExtension!!.uppercase() else lang.label
-    val tint = languageTint(effectiveExt)
+    val tint = adaptiveLanguageTint(effectiveExt)
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -289,6 +291,8 @@ fun CreateSnippetScreen(
                     selected = if (vm.customExtension.isNullOrBlank()) vm.manualLanguage else null,
                     detected = vm.detectedLanguage,
                     customExtension = vm.customExtension,
+                    customExtensions = customExtensions,
+                    recentExtensions = recentExtensions,
                     onSelect = {
                         vm.manualLanguage = it
                         vm.customExtension = null
@@ -296,6 +300,10 @@ fun CreateSnippetScreen(
                     onCustomExtension = {
                         vm.customExtension = it
                         vm.manualLanguage = null
+                        vm.addCustomExtension(it)
+                    },
+                    onRemoveCustomExtension = {
+                        vm.removeCustomExtension(it)
                     }
                 )
             }

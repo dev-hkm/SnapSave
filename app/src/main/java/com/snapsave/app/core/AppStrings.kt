@@ -132,6 +132,9 @@ interface AppStrings {
     val apply: String
     val openWithAction: String
     val openWithTitle: String
+    val shareAction: String
+    val deleteCustomExtensionTitle: String
+    fun deleteCustomExtensionPrompt(ext: String): String
     val doneAction: String
 
     // Home layout & toggles
@@ -304,6 +307,9 @@ object StringsEn : AppStrings {
     override val apply = "Apply"
     override val openWithAction = "Open with…"
     override val openWithTitle = "Open file with…"
+    override val shareAction = "Share"
+    override val deleteCustomExtensionTitle = "Remove Extension"
+    override fun deleteCustomExtensionPrompt(ext: String) = "Do you want to remove .$ext from your saved extensions?"
     override val doneAction = "Done"
 
     // Home layout & toggles
@@ -474,6 +480,9 @@ object StringsVi : AppStrings {
     override val apply = "Áp dụng"
     override val openWithAction = "Mở bằng…"
     override val openWithTitle = "Mở tệp bằng…"
+    override val shareAction = "Chia sẻ"
+    override val deleteCustomExtensionTitle = "Xóa định dạng"
+    override fun deleteCustomExtensionPrompt(ext: String) = "Bạn có muốn xóa .$ext khỏi danh sách đã lưu không?"
     override val doneAction = "Xong"
 
     // Home layout & toggles

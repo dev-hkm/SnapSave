@@ -36,6 +36,12 @@ class QuickSaveViewModel(
             SettingsRepository.cachedStorageSettings ?: StorageSettings()
         )
 
+    val customExtensions: StateFlow<Set<String>> = settings.customExtensions
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    val recentExtensions: StateFlow<List<String>> = settings.recentExtensions
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     var targetOverride by mutableStateOf<QuickSaveTarget?>(null)
         private set
 
@@ -56,6 +62,18 @@ class QuickSaveViewModel(
 
     fun setCustomFolder(uri: String?, name: String?) {
         viewModelScope.launch { settings.setCustomFolder(uri, name) }
+    }
+
+    fun addCustomExtension(ext: String) {
+        viewModelScope.launch { settings.addCustomExtension(ext) }
+    }
+
+    fun removeCustomExtension(ext: String) {
+        viewModelScope.launch { settings.removeCustomExtension(ext) }
+    }
+
+    fun recordRecentExtension(ext: String) {
+        viewModelScope.launch { settings.recordRecentExtension(ext) }
     }
 
     fun save(
@@ -123,6 +141,10 @@ class QuickSaveViewModel(
                 msg
             }.onSuccess { message ->
                 savedMessage = message
+                settings.recordRecentExtension(ext)
+                if (!customExtension.isNullOrBlank()) {
+                    settings.addCustomExtension(customExtension)
+                }
             }.onFailure { ex ->
                 error = ex.message ?: s.saveError
             }

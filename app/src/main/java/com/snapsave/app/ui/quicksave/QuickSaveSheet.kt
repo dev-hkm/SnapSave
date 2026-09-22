@@ -17,6 +17,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -44,11 +45,14 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -69,6 +73,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -90,7 +95,7 @@ import com.snapsave.app.core.haptic
 import com.snapsave.app.ui.components.LanguageBadge
 import com.snapsave.app.ui.components.LanguageIconBox
 import com.snapsave.app.ui.components.LanguagePickerRow
-import com.snapsave.app.ui.components.languageTint
+import com.snapsave.app.ui.components.adaptiveLanguageTint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -118,6 +123,8 @@ fun QuickSaveSheet(
     var title by rememberSaveable { mutableStateOf("") }
 
     val storageSettings by vm.storageSettings.collectAsStateWithLifecycle()
+    val customExtensions by vm.customExtensions.collectAsStateWithLifecycle()
+    val recentExtensions by vm.recentExtensions.collectAsStateWithLifecycle()
     val savedMessage = vm.savedMessage
 
     val folderPicker = rememberLauncherForActivityResult(
@@ -231,6 +238,13 @@ fun QuickSaveSheet(
                                     }
                                     onFinished()
                                 },
+                                onShareFile = {
+                                    val uri = vm.savedFileUri
+                                    if (uri != null) {
+                                        shareFileWithChooser(context, uri, vm.savedMimeType, s.shareTitle)
+                                    }
+                                    onFinished()
+                                },
                                 onDone = onFinished
                             )
                         } else {
@@ -257,6 +271,8 @@ fun QuickSaveSheet(
                                 detected = detected,
                                 manual = manual,
                                 customExtension = customExtension,
+                                customExtensions = customExtensions,
+                                recentExtensions = recentExtensions,
                                 onPickLanguage = {
                                     manual = it
                                     customExtension = null
@@ -264,6 +280,10 @@ fun QuickSaveSheet(
                                 onCustomExtension = {
                                     customExtension = it
                                     manual = null
+                                    vm.addCustomExtension(it)
+                                },
+                                onRemoveCustomExtension = {
+                                    vm.removeCustomExtension(it)
                                 },
                                 currentTarget = vm.targetOverride ?: storageSettings.quickSaveTarget,
                                 onSelectTarget = { vm.updateTarget(it) },
@@ -292,7 +312,7 @@ fun QuickSaveSheet(
     LaunchedEffect(savedMessage) {
         if (savedMessage != null) {
             view.haptic(HapticKind.CONFIRM)
-            delay(3500)
+            delay(5000)
             onFinished()
         }
     }
@@ -308,8 +328,11 @@ private fun QuickSaveForm(
     detected: CodeLanguage?,
     manual: CodeLanguage?,
     customExtension: String?,
+    customExtensions: Set<String> = emptySet(),
+    recentExtensions: List<String> = emptyList(),
     onPickLanguage: (CodeLanguage?) -> Unit,
     onCustomExtension: (String) -> Unit,
+    onRemoveCustomExtension: (String) -> Unit = {},
     currentTarget: QuickSaveTarget,
     onSelectTarget: (QuickSaveTarget) -> Unit,
     customFolderName: String?,
@@ -328,7 +351,9 @@ private fun QuickSaveForm(
     }
     val effectiveExt = customExtension ?: lang.extension
     val effectiveLabel = if (!customExtension.isNullOrBlank()) customExtension.uppercase() else lang.label
-    val tint = languageTint(effectiveExt)
+    val tint = adaptiveLanguageTint(effectiveExt)
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val isDark = !isLight
     val view = LocalView.current
 
     Column(
@@ -337,7 +362,7 @@ private fun QuickSaveForm(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // 1. Tiêu đề + Huy hiệu ngôn ngữ
+        // 1. Tiêu đề + Huy hiệu ngôn ngữ chống chói (Soft badge)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
@@ -355,12 +380,20 @@ private fun QuickSaveForm(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
-                Text(
-                    s.detectedFormat(effectiveLabel),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = tint,
-                    fontWeight = FontWeight.Medium
-                )
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = tint.copy(alpha = if (isDark) 0.18f else 0.12f),
+                    border = BorderStroke(1.dp, tint.copy(alpha = if (isDark) 0.35f else 0.25f)),
+                    modifier = Modifier.padding(top = 3.dp)
+                ) {
+                    Text(
+                        text = s.detectedFormat(effectiveLabel),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = tint,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
             }
         }
 
@@ -464,7 +497,7 @@ private fun QuickSaveForm(
             suffix = {
                 Text(
                     ".$effectiveExt",
-                    color = MaterialTheme.colorScheme.primary,
+                    color = tint,
                     fontWeight = FontWeight.SemiBold
                 )
             },
@@ -472,13 +505,16 @@ private fun QuickSaveForm(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // 5. Chọn ngôn ngữ
+        // 5. Chọn ngôn ngữ (Lưu tùy chỉnh + MRU)
         LanguagePickerRow(
             selected = if (customExtension.isNullOrBlank()) manual else null,
             detected = detected,
             customExtension = customExtension,
+            customExtensions = customExtensions,
+            recentExtensions = recentExtensions,
             onSelect = onPickLanguage,
             onCustomExtension = onCustomExtension,
+            onRemoveCustomExtension = onRemoveCustomExtension,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -528,6 +564,7 @@ private fun SuccessPane(
     message: String,
     hasFileToOpen: Boolean,
     onOpenFile: () -> Unit,
+    onShareFile: () -> Unit,
     onDone: () -> Unit
 ) {
     val s = S
@@ -582,13 +619,13 @@ private fun SuccessPane(
         )
         Spacer(Modifier.height(20.dp))
 
-        // Action Buttons: [Open with…] & [Done]
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (hasFileToOpen) {
+        // Action Buttons: [Mở bằng…] & [Chia sẻ]
+        if (hasFileToOpen) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Button(
                     onClick = {
                         view.haptic(HapticKind.CLICK)
@@ -602,16 +639,44 @@ private fun SuccessPane(
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Text(s.openWithAction, maxLines = 1)
+                    Spacer(Modifier.width(6.dp))
+                    Text(s.openWithAction, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                FilledTonalButton(
+                    onClick = {
+                        view.haptic(HapticKind.CLICK)
+                        onShareFile()
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Icon(
+                        Icons.Rounded.Share,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(s.shareAction, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            TextButton(
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(
                 onClick = {
                     view.haptic(HapticKind.CLICK)
                     onDone()
                 },
-                modifier = if (hasFileToOpen) Modifier else Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text(s.doneAction)
+            }
+        } else {
+            Button(
+                onClick = {
+                    view.haptic(HapticKind.CLICK)
+                    onDone()
+                },
+                modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.medium
             ) {
                 Text(s.doneAction)
@@ -649,5 +714,20 @@ private fun openFileWithChooser(context: Context, uri: Uri, mime: String, title:
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             })
         }
+    }
+}
+
+private fun shareFileWithChooser(context: Context, uri: Uri, mime: String, title: String) {
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = mime.ifBlank { "text/plain" }
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    val chooser = Intent.createChooser(intent, title).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    runCatching {
+        context.startActivity(chooser)
     }
 }
