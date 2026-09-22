@@ -1,0 +1,267 @@
+package com.snapsave.app.service
+
+import android.annotation.SuppressLint
+import android.content.Context
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.text.TextUtils
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.RecyclerView
+import com.snapsave.app.R
+import com.snapsave.app.core.formatSize
+import com.snapsave.app.data.SnippetEntity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+internal class OverlaySnippetAdapter(
+    private val scope: CoroutineScope,
+    private val onSelected: (View, SnippetEntity) -> Unit,
+    private val onLongClick: ((View, SnippetEntity) -> Unit)? = null
+) : RecyclerView.Adapter<OverlaySnippetAdapter.Holder>() {
+
+    private var snippets = emptyList<SnippetEntity>()
+    private var submitGeneration = 0L
+
+    init {
+        setHasStableIds(true)
+    }
+
+    class Holder(
+        val frame: FrameLayout,
+        val titleView: TextView,
+        val langBadge: TextView,
+        val metaView: TextView,
+        val previewView: TextView,
+        val copyIcon: ImageView
+    ) : RecyclerView.ViewHolder(frame) {
+        var snippet: SnippetEntity? = null
+    }
+
+    override fun getItemCount(): Int = snippets.size
+
+    override fun getItemId(position: Int): Long =
+        snippets.getOrNull(position)?.id ?: RecyclerView.NO_ID
+
+    fun submit(items: List<SnippetEntity>, force: Boolean = false) {
+        val generation = ++submitGeneration
+        if (!force && items == snippets) return
+        if (snippets.isEmpty() && items.isNotEmpty()) {
+            snippets = items
+            notifyDataSetChanged()
+            return
+        }
+        val oldItems = snippets
+        scope.launch {
+            val diff = withContext(Dispatchers.Default) {
+                DiffUtil.calculateDiff(object : DiffUtil.Callback() {
+                    override fun getOldListSize(): Int = oldItems.size
+                    override fun getNewListSize(): Int = items.size
+                    override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean =
+                        oldItems[oldItemPosition].id == items[newItemPosition].id
+
+                    override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean =
+                        oldItems[oldItemPosition] == items[newItemPosition]
+                })
+            }
+            if (generation != submitGeneration) return@launch
+            snippets = items
+            diff.dispatchUpdatesTo(this@OverlaySnippetAdapter)
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
+        val context = parent.context
+        val density = context.resources.displayMetrics.density
+        val palette = SnippetOverlayPaletteResolver.resolve(context)
+
+        val frame = FrameLayout(context).apply {
+            isClickable = true
+            isFocusable = true
+            val cardBg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 12 * density
+                setColor(if (palette.isDark) Color.parseColor("#222630") else Color.parseColor("#F6F8FA"))
+                setStroke((1 * density).toInt(), if (palette.isDark) Color.parseColor("#343A48") else Color.parseColor("#E1E4EA"))
+            }
+            background = cardBg
+            val pad = (10 * density).toInt()
+            setPadding(pad, pad, pad, pad)
+            val lp = RecyclerView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                val marginH = (4 * density).toInt()
+                val marginV = (4 * density).toInt()
+                setMargins(marginH, marginV, marginH, marginV)
+            }
+            layoutParams = lp
+        }
+
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        // Top Row: Lang badge + Title + Copy icon
+        val topRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, 0, 0, (6 * density).toInt())
+            }
+        }
+
+        val langBadge = TextView(context).apply {
+            textSize = 10f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
+            val badgeBg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 6 * density
+                setColor(palette.primaryColor)
+            }
+            background = badgeBg
+            val pH = (6 * density).toInt()
+            val pV = (2 * density).toInt()
+            setPadding(pH, pV, pH, pV)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, 0, (8 * density).toInt(), 0)
+            }
+        }
+
+        val titleView = TextView(context).apply {
+            textSize = 13f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(palette.textColor)
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val copyIcon = ImageView(context).apply {
+            setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_overlay_copy))
+            setColorFilter(palette.mutedTextColor)
+            val iconSize = (16 * density).toInt()
+            layoutParams = LinearLayout.LayoutParams(iconSize, iconSize).apply {
+                setMargins((6 * density).toInt(), 0, 0, 0)
+            }
+        }
+
+        topRow.addView(langBadge)
+        topRow.addView(titleView)
+        topRow.addView(copyIcon)
+        container.addView(topRow)
+
+        // Monospace Preview Box
+        val previewContainer = FrameLayout(context).apply {
+            val bg = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 8 * density
+                setColor(if (palette.isDark) Color.parseColor("#171A21") else Color.parseColor("#EBEFF5"))
+            }
+            background = bg
+            val p = (6 * density).toInt()
+            setPadding(p, p, p, p)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, 0, 0, (4 * density).toInt())
+            }
+        }
+
+        val previewView = TextView(context).apply {
+            typeface = Typeface.MONOSPACE
+            textSize = 10.5f
+            setTextColor(if (palette.isDark) Color.parseColor("#D0D5DD") else Color.parseColor("#344054"))
+            maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+        previewContainer.addView(previewView)
+        container.addView(previewContainer)
+
+        // Meta info (lines count · size)
+        val metaView = TextView(context).apply {
+            textSize = 10f
+            setTextColor(palette.mutedTextColor)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+        container.addView(metaView)
+
+        frame.addView(container)
+
+        val holder = Holder(frame, titleView, langBadge, metaView, previewView, copyIcon)
+
+        frame.setOnClickListener {
+            holder.snippet?.let { onSelected(frame, it) }
+        }
+
+        frame.setOnLongClickListener {
+            holder.snippet?.let { snippet ->
+                onLongClick?.invoke(frame, snippet)
+            }
+            true
+        }
+
+        frame.setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> view.animate().scaleX(0.97f).scaleY(0.97f).setDuration(80).start()
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> view.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
+            }
+            false
+        }
+
+        return holder
+    }
+
+    override fun onBindViewHolder(holder: Holder, position: Int) {
+        val snippet = snippets.getOrNull(position)
+        if (snippet == null) {
+            holder.snippet = null
+            return
+        }
+        holder.snippet = snippet
+        holder.frame.findViewWithTag<View>("copied_feedback_badge")?.let(holder.frame::removeView)
+        holder.frame.animate().cancel()
+        holder.frame.scaleX = 1f
+        holder.frame.scaleY = 1f
+
+        holder.titleView.text = snippet.title
+        holder.langBadge.text = snippet.extension.uppercase().ifBlank { snippet.language.uppercase() }
+        holder.metaView.text = "${snippet.lineCount} lines · ${formatSize(snippet.sizeBytes)}"
+        holder.previewView.text = snippet.preview.trim().ifBlank { "(Empty snippet)" }
+    }
+}

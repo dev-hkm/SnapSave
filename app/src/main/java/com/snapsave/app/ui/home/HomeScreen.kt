@@ -2,6 +2,9 @@ package com.snapsave.app.ui.home
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +39,7 @@ import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.automirrored.rounded.TextSnippet
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -91,6 +95,7 @@ import com.snapsave.app.core.S
 import com.snapsave.app.core.formatSize
 import com.snapsave.app.core.haptic
 import com.snapsave.app.data.SnippetEntity
+import com.snapsave.app.service.SnippetOverlayService
 import com.snapsave.app.ui.components.EmptyState
 import com.snapsave.app.ui.components.LanguageIconBox
 import com.snapsave.app.ui.components.LoadingBox
@@ -275,6 +280,47 @@ fun HomeScreen(
                                     imageVector = if (state.isGridView) Icons.Rounded.ViewAgenda else Icons.Rounded.GridView,
                                     contentDescription = s.switchViewModeDesc,
                                     tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        // Floating Quick Snippets Bubble Toggle Button
+                        Surface(
+                            onClick = {
+                                view.haptic(HapticKind.CLICK)
+                                val hasPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)
+                                if (!hasPermission) {
+                                    val intent = Intent(
+                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                        Uri.parse("package:${context.packageName}")
+                                    )
+                                    context.startActivity(intent)
+                                } else {
+                                    val serviceIntent = Intent(context, SnippetOverlayService::class.java)
+                                    if (SnippetOverlayService.isRunning) {
+                                        context.stopService(serviceIntent)
+                                    } else {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                            context.startForegroundService(serviceIntent)
+                                        } else {
+                                            context.startService(serviceIntent)
+                                        }
+                                    }
+                                }
+                            },
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (SnippetOverlayService.isRunning) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f),
+                            border = BorderStroke(1.dp, if (SnippetOverlayService.isRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                            modifier = Modifier
+                                .size(42.dp)
+                                .pressScale()
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Bolt,
+                                    contentDescription = s.floatingOverlayTitle,
+                                    tint = if (SnippetOverlayService.isRunning) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }

@@ -3,6 +3,7 @@ package com.snapsave.app.ui.settings
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -75,6 +76,9 @@ import com.snapsave.app.core.QuickSaveTarget
 import com.snapsave.app.core.S
 import com.snapsave.app.core.formatSize
 import com.snapsave.app.core.haptic
+import com.snapsave.app.service.OverlayAfterCopyAction
+import com.snapsave.app.service.SnippetOverlayPreferences
+import com.snapsave.app.service.SnippetOverlayService
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,6 +93,8 @@ fun SettingsScreen(
     val view = LocalView.current
     val context = LocalContext.current
     var confirmClear by remember { mutableStateOf(false) }
+    var isOverlayRunning by remember { mutableStateOf(SnippetOverlayService.isRunning) }
+    var afterCopyAction by remember { mutableStateOf(SnippetOverlayPreferences.afterCopyAction(context)) }
     val supportsDynamic = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
     val folderPicker = rememberLauncherForActivityResult(
@@ -321,7 +327,71 @@ fun SettingsScreen(
                 }
             }
 
-            // 4. Data & Storage
+            // 4. Floating Quick Snippets (StickHub Architecture)
+            SettingsGroup(title = s.floatingOverlayTitle) {
+                val hasPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)
+                SettingSwitchRow(
+                    icon = Icons.Rounded.Bolt,
+                    title = s.floatingOverlayTitle,
+                    subtitle = if (!hasPermission) s.floatingOverlayPermissionRequired else s.floatingOverlaySubtitle,
+                    checked = isOverlayRunning && hasPermission,
+                    onChange = { enabled ->
+                        view.haptic(HapticKind.CLICK)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(context)) {
+                            val intent = Intent(
+                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                Uri.parse("package:${context.packageName}")
+                            )
+                            context.startActivity(intent)
+                        } else {
+                            val serviceIntent = Intent(context, SnippetOverlayService::class.java)
+                            if (enabled) {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                    context.startForegroundService(serviceIntent)
+                                } else {
+                                    context.startService(serviceIntent)
+                                }
+                                isOverlayRunning = true
+                            } else {
+                                context.stopService(serviceIntent)
+                                isOverlayRunning = false
+                            }
+                        }
+                    }
+                )
+
+                if (isOverlayRunning && hasPermission) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        s.overlayAfterCopyTitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                        SegmentedButton(
+                            selected = afterCopyAction == OverlayAfterCopyAction.CLOSE_POPUP,
+                            onClick = {
+                                view.haptic(HapticKind.TICK)
+                                afterCopyAction = OverlayAfterCopyAction.CLOSE_POPUP
+                                SnippetOverlayPreferences.setAfterCopyAction(context, OverlayAfterCopyAction.CLOSE_POPUP)
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                        ) { Text(s.overlayAfterCopyClose) }
+
+                        SegmentedButton(
+                            selected = afterCopyAction == OverlayAfterCopyAction.KEEP_OPEN,
+                            onClick = {
+                                view.haptic(HapticKind.TICK)
+                                afterCopyAction = OverlayAfterCopyAction.KEEP_OPEN
+                                SnippetOverlayPreferences.setAfterCopyAction(context, OverlayAfterCopyAction.KEEP_OPEN)
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                        ) { Text(s.overlayAfterCopyKeep) }
+                    }
+                }
+            }
+
+            // 5. Data & Storage
             SettingsGroup(title = s.dataGroupTitle) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {

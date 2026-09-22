@@ -13,8 +13,8 @@ android {
         applicationId = "com.snapsave.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
-        versionName = "1.0.13"
+        versionCode = 15
+        versionName = "1.0.14"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -78,4 +78,5 @@ dependencies {
     implementation(libs.core.splashscreen)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.documentfile)
+    implementation("androidx.recyclerview:recyclerview:1.4.0")
 }

@@ -167,6 +167,17 @@ interface AppStrings {
     val sortSize: String
     val quickCopied: String
     val actionExportFile: String
+
+    // Floating Overlay (Quick Snippets)
+    val floatingOverlayTitle: String
+    val floatingOverlaySubtitle: String
+    val floatingOverlayPermissionRequired: String
+    val overlayAfterCopyTitle: String
+    val overlayAfterCopyClose: String
+    val overlayAfterCopyKeep: String
+    val quickSaveClipboard: String
+    val clipboardSavedSuccess: String
+    val clipboardEmpty: String
 }
 
 object StringsEn : AppStrings {
@@ -342,6 +353,17 @@ object StringsEn : AppStrings {
     override val sortSize = "File size"
     override val quickCopied = "Code copied!"
     override val actionExportFile = "Export to device (Download)"
+
+    // Floating Overlay
+    override val floatingOverlayTitle = "Floating Quick Snippets"
+    override val floatingOverlaySubtitle = "Draggable floating bubble & popup to copy/paste long content anywhere"
+    override val floatingOverlayPermissionRequired = "Requires 'Display over other apps' permission"
+    override val overlayAfterCopyTitle = "After copying snippet"
+    override val overlayAfterCopyClose = "Close popup"
+    override val overlayAfterCopyKeep = "Keep popup open"
+    override val quickSaveClipboard = "Save clipboard"
+    override val clipboardSavedSuccess = "Saved clipboard content as snippet!"
+    override val clipboardEmpty = "Clipboard is empty"
 }
 
 object StringsVi : AppStrings {
@@ -515,6 +537,17 @@ object StringsVi : AppStrings {
     override val sortSize = "Dung lượng"
     override val quickCopied = "Đã chép mã!"
     override val actionExportFile = "Xuất ra bộ nhớ máy (Download)"
+
+    // Floating Overlay
+    override val floatingOverlayTitle = "Bóng nổi Quick Snippets"
+    override val floatingOverlaySubtitle = "Bóng nổi & popup kéo thả để sao chép/dán nội dung dài ở mọi ứng dụng"
+    override val floatingOverlayPermissionRequired = "Cần cấp quyền 'Hiển thị trên các ứng dụng khác'"
+    override val overlayAfterCopyTitle = "Sau khi sao chép snippet"
+    override val overlayAfterCopyClose = "Đóng cửa sổ nổi"
+    override val overlayAfterCopyKeep = "Giữ cửa sổ nổi mở"
+    override val quickSaveClipboard = "Lưu clipboard"
+    override val clipboardSavedSuccess = "Đã lưu nội dung clipboard thành snippet mới!"
+    override val clipboardEmpty = "Bộ nhớ tạm hiện đang trống"
 }
 
 val LocalAppStrings = compositionLocalOf<AppStrings> { StringsEn }
