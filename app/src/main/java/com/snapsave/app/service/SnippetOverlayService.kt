@@ -17,6 +17,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Gravity
@@ -78,19 +79,34 @@ class SnippetOverlayService : Service() {
     private var isPanelOpen = false
 
     private var bubbleView: View? = null
+    private var bubbleBg: GradientDrawable? = null
+    private var bubbleIcon: ImageView? = null
+
     private var panelRoot: FrameLayout? = null
     private var panelSurfaceView: View? = null
+    private var panelBg: GradientDrawable? = null
+
     private var chromeContainer: LinearLayout? = null
+    private var panelHeaderView: LinearLayout? = null
+    private var panelTitleView: TextView? = null
+    private var searchEditText: EditText? = null
+    private var searchBg: GradientDrawable? = null
+    private var categoryScrollView: HorizontalScrollView? = null
+    private var chipsContainer: LinearLayout? = null
+
     private var snippetRecyclerView: androidx.recyclerview.widget.RecyclerView? = null
     private var snippetAdapter: OverlaySnippetAdapter? = null
     private var emptyStateTextView: TextView? = null
 
     private var closeBtnView: ImageView? = null
+    private var closeBtnBg: GradientDrawable? = null
     private var closeOverlayAttached = false
     private var closeOverlaySizePx = 0
     private lateinit var closeOverlayParams: WindowManager.LayoutParams
 
     private var resizeBtnView: ImageView? = null
+    private var resizeHandleBg: GradientDrawable? = null
+
     private lateinit var bubbleParams: WindowManager.LayoutParams
     private lateinit var panelParams: WindowManager.LayoutParams
 
@@ -100,10 +116,20 @@ class SnippetOverlayService : Service() {
     private var allSnippets = emptyList<SnippetEntity>()
     private var panelGeneration = 0L
 
+    /** Transient slider previews (never persisted) + the 5s reveal deadline. */
+    private val appearanceState = OverlayAppearanceState()
+    private var revealJob: Job? = null
+
     companion object {
         const val CHANNEL_ID = "snapsave_overlay_channel"
         const val NOTIF_ID = 2002
         const val ACTION_REFRESH_CONFIGURATION = "com.snapsave.app.action.REFRESH_OVERLAY_CONFIGURATION"
+        const val ACTION_UPDATE_APPEARANCE = "com.snapsave.app.action.UPDATE_APPEARANCE"
+        const val ACTION_UPDATE_SHADOW = "com.snapsave.app.action.UPDATE_SHADOW"
+        const val ACTION_REVEAL_CONTROLS = "com.snapsave.app.action.REVEAL_CONTROLS"
+        const val ACTION_PREVIEW_APPEARANCE = "com.snapsave.app.PREVIEW_APPEARANCE"
+        const val EXTRA_APPEARANCE_LAYER = "appearance_layer"
+        const val EXTRA_APPEARANCE_VALUE = "appearance_value"
         var isRunning = false
     }
 
@@ -114,14 +140,110 @@ class SnippetOverlayService : Service() {
             android.provider.Settings.canDrawOverlays(this)
     }
 
+    private fun nowMs(): Long = try {
+        SystemClock.uptimeMillis()
+    } catch (_: Exception) {
+        0L
+    }
+
+    private fun currentPalette(): SnippetOverlayPalette {
+        return SnippetOverlayPaletteResolver.resolve(this)
+    }
+
+    private fun withAlpha(color: Int, alpha: Int): Int = Color.argb(
+        alpha.coerceIn(0, 255),
+        Color.red(color),
+        Color.green(color),
+        Color.blue(color)
+    )
+
+    private fun effectiveBubbleOpacity(): Float = appearanceState.opacity(
+        "bubble",
+        OverlayOpacityPolicy.clamp(SnippetOverlayPreferences.bubbleOpacity(this)),
+        nowMs()
+    )
+
+    private fun effectiveMasterOpacity(): Float = appearanceState.opacity(
+        "master",
+        OverlayOpacityPolicy.clamp(SnippetOverlayPreferences.popupMasterOpacity(this)),
+        nowMs()
+    )
+
+    private fun effectiveSurfaceOpacity(): Float {
+        val surface = SnippetOverlayPreferences.popupSurfaceOpacity(this)
+        return appearanceState.opacity(
+            "surface",
+            effectiveMasterOpacity() * OverlayOpacityPolicy.clamp(surface),
+            nowMs()
+        )
+    }
+
+    private fun effectiveSnippetsOpacity(): Float {
+        val snippets = SnippetOverlayPreferences.popupSnippetsOpacity(this)
+        return appearanceState.opacity(
+            "snippets",
+            effectiveMasterOpacity() * OverlayOpacityPolicy.clamp(snippets),
+            nowMs()
+        )
+    }
+
+    private fun effectiveChromeOpacity(): Float {
+        val chrome = SnippetOverlayPreferences.popupChromeOpacity(this)
+        return appearanceState.opacity(
+            "chrome",
+            effectiveMasterOpacity() * OverlayOpacityPolicy.clamp(chrome),
+            nowMs()
+        )
+    }
+
+    private fun effectiveCloseOpacity(): Float {
+        val close = SnippetOverlayPreferences.popupCloseOpacity(this)
+        return appearanceState.opacity(
+            "close",
+            effectiveMasterOpacity() * OverlayOpacityPolicy.clamp(close),
+            nowMs()
+        )
+    }
+
+    private fun effectiveResizeOpacity(): Float {
+        val resize = SnippetOverlayPreferences.popupResizeOpacity(this)
+        return appearanceState.opacity(
+            "resize",
+            effectiveMasterOpacity() * OverlayOpacityPolicy.clamp(resize),
+            nowMs()
+        )
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (!hasOverlayPermission()) {
             isRunning = false
             stopSelf()
             return START_NOT_STICKY
         }
-        if (intent?.action == ACTION_REFRESH_CONFIGURATION) {
-            reflowOverlayViews()
+        if (::windowManager.isInitialized) {
+            when (intent?.action) {
+                ACTION_REFRESH_CONFIGURATION -> {
+                    reflowOverlayViews()
+                    refreshOverlayConfiguration()
+                }
+                ACTION_UPDATE_APPEARANCE -> {
+                    appearanceState.clearPreviews()
+                    updateOverlayAppearance()
+                }
+                ACTION_UPDATE_SHADOW -> {
+                    updateSnippetShadows()
+                }
+                ACTION_REVEAL_CONTROLS -> {
+                    revealOverlayControls()
+                }
+                ACTION_PREVIEW_APPEARANCE -> {
+                    val layer = intent.getStringExtra(EXTRA_APPEARANCE_LAYER)
+                    val value = intent.getFloatExtra(EXTRA_APPEARANCE_VALUE, Float.NaN)
+                    if (appearanceState.preview(layer, value)) {
+                        updateOverlayAppearance()
+                    }
+                }
+            }
         }
         return START_NOT_STICKY
     }
@@ -195,6 +317,89 @@ class SnippetOverlayService : Service() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         reflowOverlayViews()
+    }
+
+    private fun updateOverlayAppearance() {
+        bubbleView?.alpha = effectiveBubbleOpacity()
+
+        if (isPanelOpen) {
+            panelSurfaceView?.alpha = effectiveSurfaceOpacity()
+            chromeContainer?.alpha = effectiveChromeOpacity()
+            snippetRecyclerView?.alpha = effectiveSnippetsOpacity()
+            closeBtnView?.alpha = effectiveCloseOpacity()
+            resizeBtnView?.alpha = effectiveResizeOpacity()
+        }
+
+        val palette = currentPalette()
+        val density = resources.displayMetrics.density
+
+        bubbleBg?.apply {
+            setColor(withAlpha(palette.surfaceColor, if (palette.isDark) 240 else 250))
+            setStroke((2 * density).toInt(), palette.primaryColor)
+        }
+        bubbleIcon?.setColorFilter(palette.primaryColor)
+
+        panelBg?.apply {
+            cornerRadius = 24 * density
+            setColor(withAlpha(palette.surfaceColor, if (palette.isDark) 244 else 252))
+            setStroke((1.2f * density).toInt(), withAlpha(palette.outlineColor, if (palette.isDark) 70 else 80))
+        }
+        closeBtnView?.setColorFilter(palette.textColor)
+        closeBtnBg?.apply {
+            setColor(withAlpha(palette.surfaceColor, if (palette.isDark) 200 else 230))
+            setStroke((1 * density).toInt(), withAlpha(palette.outlineColor, if (palette.isDark) 70 else 80))
+        }
+        resizeBtnView?.setColorFilter(palette.accentColor)
+        resizeHandleBg?.setColor(withAlpha(palette.surfaceVariantColor, if (palette.isDark) 190 else 220))
+        emptyStateTextView?.setTextColor(palette.mutedTextColor)
+        searchBg?.setColor(withAlpha(palette.surfaceVariantColor, if (palette.isDark) 150 else 210))
+    }
+
+    private fun updateSnippetShadows() {
+        filterAndSubmitSnippets(force = true)
+    }
+
+    private fun revealOverlayControls() {
+        revealJob?.cancel()
+        appearanceState.reveal(nowMs())
+        updateOverlayAppearance()
+        revealJob = serviceScope.launch {
+            delay(OverlayAppearanceState.REVEAL_DURATION_MS)
+            updateOverlayAppearance()
+        }
+    }
+
+    private fun refreshOverlayConfiguration() {
+        val density = resources.displayMetrics.density
+        val palette = currentPalette()
+
+        val bubbleSizeDp = SnippetOverlayPreferences.bubbleSizeDp(this)
+        val bubbleSize = (bubbleSizeDp * density).toInt()
+        bubbleView?.let { bubble ->
+            if (::bubbleParams.isInitialized) {
+                bubbleParams.width = bubbleSize
+                bubbleParams.height = bubbleSize
+                bubbleBg?.apply {
+                    setColor(withAlpha(palette.surfaceColor, if (palette.isDark) 240 else 250))
+                    setStroke((2 * density).toInt(), palette.primaryColor)
+                }
+                bubbleIcon?.setColorFilter(palette.primaryColor)
+                if (bubble.isAttachedToWindow) {
+                    windowManager.updateViewLayout(bubble, bubbleParams)
+                }
+            }
+        }
+
+        val showTitle = SnippetOverlayPreferences.showTitle(this)
+        val showSearch = SnippetOverlayPreferences.showSearch(this)
+        val showCategories = SnippetOverlayPreferences.showCategories(this)
+
+        panelHeaderView?.visibility = if (showTitle) View.VISIBLE else View.GONE
+        panelTitleView?.visibility = if (showTitle) View.VISIBLE else View.GONE
+        searchEditText?.visibility = if (showSearch) View.VISIBLE else View.GONE
+        categoryScrollView?.visibility = if (showCategories) View.VISIBLE else View.GONE
+
+        updateOverlayAppearance()
     }
 
     private fun reflowOverlayViews() {
@@ -303,24 +508,25 @@ class SnippetOverlayService : Service() {
             y = initialY
         }
 
-        val palette = SnippetOverlayPaletteResolver.resolve(this)
+        val palette = currentPalette()
         val bubble = FrameLayout(this).apply {
-            alpha = SnippetOverlayPreferences.bubbleOpacity(this@SnippetOverlayService)
+            alpha = effectiveBubbleOpacity()
             val bg = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(if (palette.isDark) Color.parseColor("#1E222D") else Color.parseColor("#FFFFFF"))
+                setColor(withAlpha(palette.surfaceColor, if (palette.isDark) 240 else 250))
                 setStroke((2 * density).toInt(), palette.primaryColor)
             }
+            bubbleBg = bg
             background = bg
             elevation = 16f
 
-            // Copy / Snippet Vector Icon inside bubble
             val icon = ImageView(this@SnippetOverlayService).apply {
                 setImageDrawable(ContextCompat.getDrawable(this@SnippetOverlayService, R.drawable.ic_overlay_copy))
                 setColorFilter(palette.primaryColor)
                 val pad = (bubbleSize * 0.24f).toInt()
                 setPadding(pad, pad, pad, pad)
             }
+            bubbleIcon = icon
             addView(icon)
         }
 
@@ -399,9 +605,6 @@ class SnippetOverlayService : Service() {
         windowManager.addView(bubble, bubbleParams)
     }
 
-    private var chipsContainer: LinearLayout? = null
-    private var searchEditText: EditText? = null
-
     @SuppressLint("ClickableViewAccessibility")
     private fun setupPanelView() {
         val density = resources.displayMetrics.density
@@ -463,7 +666,7 @@ class SnippetOverlayService : Service() {
             y = clampedBounds.y
         }
 
-        val palette = SnippetOverlayPaletteResolver.resolve(this)
+        val palette = currentPalette()
 
         // 1. Root popup FrameLayout: translucent container
         val root = FrameLayout(this).apply {
@@ -471,21 +674,22 @@ class SnippetOverlayService : Service() {
             clipToPadding = false
         }
 
-        // 2. Layer 1: Background Surface View
+        // 2. Layer 1: Background Surface View (Bo tròn 24dp mềm mại chuẩn Material 3)
         val surfaceLayer = View(this).apply {
             val bg = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 16 * density
-                setColor(palette.surfaceColor)
-                setStroke((1 * density).toInt(), palette.outlineColor)
+                cornerRadius = 24 * density
+                setColor(withAlpha(palette.surfaceColor, if (palette.isDark) 244 else 252))
+                setStroke((1.2f * density).toInt(), withAlpha(palette.outlineColor, if (palette.isDark) 70 else 80))
             }
+            panelBg = bg
             background = bg
             elevation = 12f
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             )
-            alpha = SnippetOverlayPreferences.popupSurfaceOpacity(this@SnippetOverlayService)
+            alpha = effectiveSurfaceOpacity()
         }
         panelSurfaceView = surfaceLayer
         root.addView(surfaceLayer)
@@ -512,11 +716,10 @@ class SnippetOverlayService : Service() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
-            alpha = SnippetOverlayPreferences.popupChromeOpacity(this@SnippetOverlayService)
+            alpha = effectiveChromeOpacity()
         }
         chromeContainer = chrome
 
-        // Draggable listener for moving the entire popup window
         var initialPanelX = 0
         var initialPanelY = 0
         var initialTouchPanelX = 0f
@@ -563,10 +766,11 @@ class SnippetOverlayService : Service() {
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding((8 * density).toInt(), (4 * density).toInt(), (8 * density).toInt(), (4 * density).toInt())
+            setPadding((10 * density).toInt(), (4 * density).toInt(), (10 * density).toInt(), (4 * density).toInt())
             visibility = if (showTitle) View.VISIBLE else View.GONE
             setOnTouchListener(panelDragListener)
         }
+        panelHeaderView = header
 
         val title = TextView(this).apply {
             text = "SnapSave"
@@ -579,18 +783,19 @@ class SnippetOverlayService : Service() {
                 1f
             )
         }
+        panelTitleView = title
         header.addView(title)
 
         // Save Clipboard Button in Header
         val saveClipboardBtn = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            val padH = (8 * density).toInt()
-            val padV = (3 * density).toInt()
+            val padH = (9 * density).toInt()
+            val padV = (4 * density).toInt()
             setPadding(padH, padV, padH, padV)
             val btnBg = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 8 * density
+                cornerRadius = 10 * density
                 setColor(palette.primaryContainerColor)
             }
             background = btnBg
@@ -620,20 +825,21 @@ class SnippetOverlayService : Service() {
         header.addView(saveClipboardBtn)
         chrome.addView(header)
 
-        // B. Search Box (~38dp)
+        // B. Search Box (~38dp, bo tròn 14dp)
         val search = EditText(this).apply {
             hint = "Tìm snippet, nội dung, ngôn ngữ…"
-            setHintTextColor(palette.mutedTextColor)
+            setHintTextColor(withAlpha(palette.mutedTextColor, 160))
             setTextColor(palette.textColor)
             textSize = 12.5f
             setSingleLine(true)
             val sBg = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 10 * density
-                setColor(palette.surfaceVariantColor)
+                cornerRadius = 14 * density
+                setColor(withAlpha(palette.surfaceVariantColor, if (palette.isDark) 150 else 210))
             }
+            searchBg = sBg
             background = sBg
-            val pH = (10 * density).toInt()
+            val pH = (12 * density).toInt()
             val pV = (6 * density).toInt()
             setPadding(pH, pV, pH, pV)
             layoutParams = LinearLayout.LayoutParams(
@@ -660,7 +866,7 @@ class SnippetOverlayService : Service() {
         searchEditText = search
         chrome.addView(search)
 
-        // C. Category Chips
+        // C. Category Chips (Thanh cuộn ngang, bo góc dạng pill 18dp)
         val chipsScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
             setBackgroundColor(Color.TRANSPARENT)
@@ -673,6 +879,7 @@ class SnippetOverlayService : Service() {
             }
             visibility = if (showCategories) View.VISIBLE else View.GONE
         }
+        categoryScrollView = chipsScroll
         val chipsGroup = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
         }
@@ -692,7 +899,7 @@ class SnippetOverlayService : Service() {
                 1f
             )
             clipToPadding = false
-            alpha = SnippetOverlayPreferences.popupSnippetsOpacity(this@SnippetOverlayService)
+            alpha = effectiveSnippetsOpacity()
         }
         snippetRecyclerView = recycler
         snippetAdapter = OverlaySnippetAdapter(
@@ -729,9 +936,10 @@ class SnippetOverlayService : Service() {
             setPadding(pad, pad, pad, pad)
             val btnBg = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(palette.surfaceColor)
-                setStroke((1 * density).toInt(), palette.outlineColor)
+                setColor(withAlpha(palette.surfaceColor, if (palette.isDark) 200 else 230))
+                setStroke((1 * density).toInt(), withAlpha(palette.outlineColor, if (palette.isDark) 70 else 80))
             }
+            closeBtnBg = btnBg
             background = btnBg
             contentDescription = "Close popup. Hold and drag to move."
             elevation = 14f
@@ -772,7 +980,7 @@ class SnippetOverlayService : Service() {
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val dx = (event.rawX - closeInitialTouchX).toInt()
-                    val dy = (event.rawY - closeInitialTouchY).toInt()
+                    val dy = (event.rawY - initialTouchPanelY).toInt()
                     if (!movingFromClose && (abs(dx) > touchSlop || abs(dy) > touchSlop)) {
                         closeGestureCancelled = true
                         view.removeCallbacks(closeLongPress)
@@ -789,7 +997,7 @@ class SnippetOverlayService : Service() {
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     view.removeCallbacks(closeLongPress)
                     closePressActive = false
-                    closeBtn.animate().scaleX(1f).scaleY(1f).alpha(SnippetOverlayPreferences.popupCloseOpacity(this@SnippetOverlayService)).setDuration(160).start()
+                    closeBtn.animate().scaleX(1f).scaleY(1f).alpha(effectiveCloseOpacity()).setDuration(160).start()
                     if (movingFromClose) {
                         SnippetOverlayPreferences.setPanelPosition(this@SnippetOverlayService, panelParams.x, panelParams.y)
                     } else if (!closeGestureCancelled && event.actionMasked == MotionEvent.ACTION_UP) {
@@ -805,7 +1013,7 @@ class SnippetOverlayService : Service() {
             view.haptic(HapticKind.CLICK)
             togglePanel()
         }
-        closeBtn.alpha = SnippetOverlayPreferences.popupCloseOpacity(this)
+        closeBtn.alpha = effectiveCloseOpacity()
         closeBtnView = closeBtn
 
         // Resize Handle (Bottom-End)
@@ -820,11 +1028,12 @@ class SnippetOverlayService : Service() {
                 cornerRadii = floatArrayOf(
                     8 * density, 8 * density,
                     4 * density, 4 * density,
-                    14 * density, 14 * density,
+                    20 * density, 20 * density,
                     4 * density, 4 * density
                 )
-                setColor(palette.surfaceVariantColor)
+                setColor(withAlpha(palette.surfaceVariantColor, if (palette.isDark) 190 else 220))
             }
+            resizeHandleBg = handleBg
             background = handleBg
             contentDescription = "Resize quick snippets"
             elevation = 14f
@@ -941,6 +1150,8 @@ class SnippetOverlayService : Service() {
             isPanelOpen = true
             panel.animate().cancel()
 
+            // Resolve start filter mode on open
+            resolveStartFilterOnOpen()
             updateCategoryChips()
             filterAndSubmitSnippets()
 
@@ -959,11 +1170,11 @@ class SnippetOverlayService : Service() {
             }
             attachCloseOverlay()
 
-            val surfOp = SnippetOverlayPreferences.popupSurfaceOpacity(this)
-            val chrOp = SnippetOverlayPreferences.popupChromeOpacity(this)
-            val snpOp = SnippetOverlayPreferences.popupSnippetsOpacity(this)
-            val clsOp = SnippetOverlayPreferences.popupCloseOpacity(this)
-            val resOp = SnippetOverlayPreferences.popupResizeOpacity(this)
+            val surfOp = effectiveSurfaceOpacity()
+            val chrOp = effectiveChromeOpacity()
+            val snpOp = effectiveSnippetsOpacity()
+            val clsOp = effectiveCloseOpacity()
+            val resOp = effectiveResizeOpacity()
 
             panelSurfaceView?.animate()?.alpha(surfOp)?.setDuration(260)?.start()
             chromeContainer?.animate()?.alpha(chrOp)?.setDuration(260)?.start()
@@ -983,6 +1194,23 @@ class SnippetOverlayService : Service() {
                     }
                 }
                 .start()
+        }
+    }
+
+    private fun resolveStartFilterOnOpen() {
+        val startMode = SnippetOverlayPreferences.startFilterMode(this)
+        when (startMode) {
+            OverlayStartFilterMode.ALL -> selectedCategory = "All"
+            OverlayStartFilterMode.PINNED -> selectedCategory = "Pinned"
+            OverlayStartFilterMode.FREQUENT -> selectedCategory = "Frequent"
+            OverlayStartFilterMode.LAST_USED -> {
+                val last = SnippetOverlayPreferences.lastUsedFilter(this)
+                selectedCategory = if (!last.isNullOrBlank()) last else "All"
+            }
+            OverlayStartFilterMode.CUSTOM_CATEGORY -> {
+                val custom = SnippetOverlayPreferences.startCustomCategory(this)
+                selectedCategory = if (custom.isNotBlank()) custom else "All"
+            }
         }
     }
 
@@ -1017,7 +1245,7 @@ class SnippetOverlayService : Service() {
                 windowManager.addView(close, closeOverlayParams)
                 closeOverlayAttached = true
                 close.isClickable = true
-            } catch (error: Exception) {
+            } catch (_: Exception) {
                 closeOverlayAttached = false
                 close.isClickable = false
             }
@@ -1038,7 +1266,7 @@ class SnippetOverlayService : Service() {
         group.removeAllViews()
 
         val density = resources.displayMetrics.density
-        val palette = SnippetOverlayPaletteResolver.resolve(this)
+        val palette = currentPalette()
 
         val uniqueLangs = allSnippets.map { it.extension.uppercase().ifBlank { it.language.uppercase() } }
             .distinct()
@@ -1054,15 +1282,15 @@ class SnippetOverlayService : Service() {
                 setTextColor(if (isSelected) palette.selectedChipContentColor else palette.mutedTextColor)
                 val bg = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    cornerRadius = 10 * density
+                    cornerRadius = 18 * density
                     if (isSelected) {
                         setColor(palette.selectedChipContainerColor)
                     } else {
-                        setColor(palette.surfaceVariantColor)
+                        setColor(withAlpha(palette.surfaceVariantColor, if (palette.isDark) 160 else 220))
                     }
                 }
                 background = bg
-                val padH = (10 * density).toInt()
+                val padH = (12 * density).toInt()
                 val padV = (5 * density).toInt()
                 setPadding(padH, padV, padH, padV)
                 layoutParams = LinearLayout.LayoutParams(
@@ -1075,6 +1303,7 @@ class SnippetOverlayService : Service() {
                 setOnClickListener { view ->
                     view.haptic(HapticKind.TICK)
                     selectedCategory = cat
+                    SnippetOverlayPreferences.setLastUsedFilter(this@SnippetOverlayService, cat)
                     updateCategoryChips()
                     filterAndSubmitSnippets()
                 }
@@ -1083,9 +1312,14 @@ class SnippetOverlayService : Service() {
         }
     }
 
-    private fun filterAndSubmitSnippets() {
+    private fun filterAndSubmitSnippets(force: Boolean = false) {
         var filtered = allSnippets
-        if (selectedCategory != "All") {
+        if (selectedCategory == "Pinned") {
+            val pinnedIds = SnippetOverlayPreferences.pinnedSnippetIds(this)
+            filtered = filtered.filter { pinnedIds.contains(it.id.toString()) }
+        } else if (selectedCategory == "Frequent") {
+            filtered = filtered.sortedByDescending { it.updatedAt }
+        } else if (selectedCategory != "All") {
             filtered = filtered.filter {
                 it.extension.equals(selectedCategory, ignoreCase = true) ||
                 it.language.equals(selectedCategory, ignoreCase = true)
@@ -1100,7 +1334,7 @@ class SnippetOverlayService : Service() {
                 it.language.lowercase().contains(q)
             }
         }
-        snippetAdapter?.submit(filtered)
+        snippetAdapter?.submit(filtered, force = force)
         emptyStateTextView?.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
     }
 
@@ -1108,7 +1342,7 @@ class SnippetOverlayService : Service() {
         serviceScope.launch {
             val content = try {
                 repository.content(snippet)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 snippet.preview
             }
             val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -1131,7 +1365,7 @@ class SnippetOverlayService : Service() {
         serviceScope.launch {
             val content = try {
                 repository.content(snippet)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 snippet.preview
             }
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -1180,7 +1414,7 @@ class SnippetOverlayService : Service() {
             frame.removeView(existing)
         }
         val density = resources.displayMetrics.density
-        val palette = SnippetOverlayPaletteResolver.resolve(this)
+        val palette = currentPalette()
         val badge = TextView(this).apply {
             tag = "copied_feedback_badge"
             text = "Copied!"
@@ -1190,10 +1424,10 @@ class SnippetOverlayService : Service() {
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 6 * density
+                cornerRadius = 8 * density
                 setColor(palette.primaryColor)
             }
-            val pH = (7 * density).toInt()
+            val pH = (8 * density).toInt()
             val pV = (3 * density).toInt()
             setPadding(pH, pV, pH, pV)
             layoutParams = FrameLayout.LayoutParams(
@@ -1231,6 +1465,7 @@ class SnippetOverlayService : Service() {
         panelState = PanelLifecycleState.CLOSED
         isPanelOpen = false
         searchDebounceJob?.cancel()
+        revealJob?.cancel()
         serviceScope.cancel()
         removeCloseOverlay()
 

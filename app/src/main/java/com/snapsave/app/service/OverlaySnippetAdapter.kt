@@ -40,6 +40,7 @@ internal class OverlaySnippetAdapter(
 
     class Holder(
         val frame: FrameLayout,
+        val cardBg: GradientDrawable,
         val titleView: TextView,
         val langBadge: TextView,
         val metaView: TextView,
@@ -81,22 +82,35 @@ internal class OverlaySnippetAdapter(
         }
     }
 
+    private fun withAlpha(color: Int, alpha: Int): Int = Color.argb(
+        alpha.coerceIn(0, 255),
+        Color.red(color),
+        Color.green(color),
+        Color.blue(color)
+    )
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
         val context = parent.context
         val density = context.resources.displayMetrics.density
         val palette = SnippetOverlayPaletteResolver.resolve(context)
+        val shadowStrength = SnippetOverlayPreferences.snippetShadowStrength(context)
+
+        val cardBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 14 * density
+            setColor(withAlpha(palette.surfaceColor, if (palette.isDark) 240 else 250))
+            setStroke(
+                (1 * density).toInt(),
+                withAlpha(palette.outlineColor, if (palette.isDark) 60 else 80)
+            )
+        }
 
         val frame = FrameLayout(context).apply {
             isClickable = true
             isFocusable = true
-            val cardBg = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = 12 * density
-                setColor(if (palette.isDark) Color.parseColor("#222630") else Color.parseColor("#F6F8FA"))
-                setStroke((1 * density).toInt(), if (palette.isDark) Color.parseColor("#343A48") else Color.parseColor("#E1E4EA"))
-            }
             background = cardBg
+            elevation = (6f * shadowStrength * density).coerceAtLeast(0f)
             val pad = (10 * density).toInt()
             setPadding(pad, pad, pad, pad)
             val lp = RecyclerView.LayoutParams(
@@ -133,14 +147,14 @@ internal class OverlaySnippetAdapter(
         val langBadge = TextView(context).apply {
             textSize = 10f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE)
+            setTextColor(palette.selectedChipContentColor)
             val badgeBg = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 6 * density
+                cornerRadius = 8 * density
                 setColor(palette.primaryColor)
             }
             background = badgeBg
-            val pH = (6 * density).toInt()
+            val pH = (7 * density).toInt()
             val pV = (2 * density).toInt()
             setPadding(pH, pV, pH, pV)
             layoutParams = LinearLayout.LayoutParams(
@@ -152,7 +166,7 @@ internal class OverlaySnippetAdapter(
         }
 
         val titleView = TextView(context).apply {
-            textSize = 13f
+            textSize = 13.5f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(palette.textColor)
             maxLines = 1
@@ -166,7 +180,7 @@ internal class OverlaySnippetAdapter(
 
         val copyIcon = ImageView(context).apply {
             setImageDrawable(ContextCompat.getDrawable(context, R.drawable.ic_overlay_copy))
-            setColorFilter(palette.mutedTextColor)
+            setColorFilter(palette.primaryColor)
             val iconSize = (16 * density).toInt()
             layoutParams = LinearLayout.LayoutParams(iconSize, iconSize).apply {
                 setMargins((6 * density).toInt(), 0, 0, 0)
@@ -178,15 +192,15 @@ internal class OverlaySnippetAdapter(
         topRow.addView(copyIcon)
         container.addView(topRow)
 
-        // Monospace Preview Box
+        // Monospace Preview Box (bo tròn 10dp)
         val previewContainer = FrameLayout(context).apply {
             val bg = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 8 * density
-                setColor(if (palette.isDark) Color.parseColor("#171A21") else Color.parseColor("#EBEFF5"))
+                cornerRadius = 10 * density
+                setColor(withAlpha(palette.surfaceVariantColor, if (palette.isDark) 140 else 200))
             }
             background = bg
-            val p = (6 * density).toInt()
+            val p = (7 * density).toInt()
             setPadding(p, p, p, p)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -198,8 +212,8 @@ internal class OverlaySnippetAdapter(
 
         val previewView = TextView(context).apply {
             typeface = Typeface.MONOSPACE
-            textSize = 10.5f
-            setTextColor(if (palette.isDark) Color.parseColor("#D0D5DD") else Color.parseColor("#344054"))
+            textSize = 11f
+            setTextColor(if (palette.isDark) Color.parseColor("#E0E3EC") else Color.parseColor("#2E333D"))
             maxLines = 2
             ellipsize = TextUtils.TruncateAt.END
             layoutParams = FrameLayout.LayoutParams(
@@ -212,7 +226,7 @@ internal class OverlaySnippetAdapter(
 
         // Meta info (lines count · size)
         val metaView = TextView(context).apply {
-            textSize = 10f
+            textSize = 10.5f
             setTextColor(palette.mutedTextColor)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -223,7 +237,7 @@ internal class OverlaySnippetAdapter(
 
         frame.addView(container)
 
-        val holder = Holder(frame, titleView, langBadge, metaView, previewView, copyIcon)
+        val holder = Holder(frame, cardBg, titleView, langBadge, metaView, previewView, copyIcon)
 
         frame.setOnClickListener {
             holder.snippet?.let { onSelected(frame, it) }
@@ -261,7 +275,7 @@ internal class OverlaySnippetAdapter(
 
         holder.titleView.text = snippet.title
         holder.langBadge.text = snippet.extension.uppercase().ifBlank { snippet.language.uppercase() }
-        holder.metaView.text = "${snippet.lineCount} lines · ${formatSize(snippet.sizeBytes)}"
-        holder.previewView.text = snippet.preview.trim().ifBlank { "(Empty snippet)" }
+        holder.metaView.text = "${snippet.lineCount} dòng · ${formatSize(snippet.sizeBytes)}"
+        holder.previewView.text = snippet.preview.trim().ifBlank { "(Snippet trống)" }
     }
 }

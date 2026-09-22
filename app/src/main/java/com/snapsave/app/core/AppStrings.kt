@@ -178,6 +178,58 @@ interface AppStrings {
     val quickSaveClipboard: String
     val clipboardSavedSuccess: String
     val clipboardEmpty: String
+    val overlayAppearanceSection: String
+    val overlayPresets: String
+    val overlayPresetBalanced: String
+    val overlayPresetBalancedDesc: String
+    val overlayPresetFloating: String
+    val overlayPresetFloatingDesc: String
+    val overlayPresetDiscreet: String
+    val overlayPresetDiscreetDesc: String
+    val overlayBubbleGroup: String
+    val overlayBubbleSize: String
+    val overlayBubbleOpacity: String
+    val overlayPopupComposition: String
+    val overlayCompositionTip: String
+    val overlayMasterOpacity: String
+    val overlayMasterOpacitySubtitle: String
+    val overlaySurfaceOpacity: String
+    val overlaySurfaceOpacitySubtitle: String
+    val overlaySnippetsOpacity: String
+    val overlaySnippetsOpacitySubtitle: String
+    val overlayChromeOpacity: String
+    val overlayChromeOpacitySubtitle: String
+    val overlayCloseOpacity: String
+    val overlayCloseOpacitySubtitle: String
+    val overlayResizeOpacity: String
+    val overlayResizeOpacitySubtitle: String
+    val overlaySnippetClarity: String
+    val overlayShadowStrength: String
+    val overlayShadowStrengthSubtitle: String
+    val overlayRevealControls: String
+    val overlayRevealControlsSubtitle: String
+    val overlayResetAppearance: String
+    val overlayResetAppearanceSubtitle: String
+    val overlayResetConfirmTitle: String
+    val overlayResetConfirmMessage: String
+    val overlayResetConfirmButton: String
+    val overlayOpeningBehavior: String
+    val overlayOpenPopupWith: String
+    val overlayFilterAll: String
+    val overlayFilterPinned: String
+    val overlayFilterFrequent: String
+    val overlayFilterLastUsed: String
+    val overlayFilterCustom: String
+    val overlayPopupContent: String
+    val overlayShowTitle: String
+    val overlayShowTitleSubtitle: String
+    val overlayShowSearch: String
+    val overlayShowSearchSubtitle: String
+    val overlayShowCategories: String
+    val overlayShowCategoriesSubtitle: String
+    val overlayGrantPermission: String
+    val overlayPermissionGranted: String
+    fun overlayVisiblePercent(percent: Int): String
 }
 
 object StringsEn : AppStrings {
@@ -364,6 +416,58 @@ object StringsEn : AppStrings {
     override val quickSaveClipboard = "Save clipboard"
     override val clipboardSavedSuccess = "Saved clipboard content as snippet!"
     override val clipboardEmpty = "Clipboard is empty"
+    override val overlayAppearanceSection = "Appearance"
+    override val overlayPresets = "Appearance presets"
+    override val overlayPresetBalanced = "Balanced"
+    override val overlayPresetBalancedDesc = "Solid contrast with discreet controls"
+    override val overlayPresetFloating = "Floating snippets"
+    override val overlayPresetFloatingDesc = "No panel background; full-strength snippets"
+    override val overlayPresetDiscreet = "Discreet"
+    override val overlayPresetDiscreetDesc = "A softer panel without dimming your snippets"
+    override val overlayBubbleGroup = "Bubble"
+    override val overlayBubbleSize = "Bubble size"
+    override val overlayBubbleOpacity = "Bubble opacity"
+    override val overlayPopupComposition = "Popup composition"
+    override val overlayCompositionTip = "Tip: For snippets floating directly on chat without a background, set Master to 100%, Popup background to 0%, and Snippets to 100%."
+    override val overlayMasterOpacity = "Whole popup opacity (master)"
+    override val overlayMasterOpacitySubtitle = "Master multiplier for all popup elements"
+    override val overlaySurfaceOpacity = "Popup background opacity"
+    override val overlaySurfaceOpacitySubtitle = "Surface background and border"
+    override val overlaySnippetsOpacity = "Snippet cards opacity"
+    override val overlaySnippetsOpacitySubtitle = "Snippet items in the list"
+    override val overlayChromeOpacity = "Header / search / tags opacity"
+    override val overlayChromeOpacitySubtitle = "Title, search box, and category chips"
+    override val overlayCloseOpacity = "Close button opacity"
+    override val overlayCloseOpacitySubtitle = "Top-right X button"
+    override val overlayResizeOpacity = "Resize button opacity"
+    override val overlayResizeOpacitySubtitle = "Bottom-right resize handle"
+    override val overlaySnippetClarity = "Snippet clarity & elevation"
+    override val overlayShadowStrength = "Snippet shadow strength"
+    override val overlayShadowStrengthSubtitle = "Card elevation and outline contrast to stand out over background apps."
+    override val overlayRevealControls = "Reveal overlay controls"
+    override val overlayRevealControlsSubtitle = "Temporarily sets bubble and all popup layers to 100% visibility for 5 seconds"
+    override val overlayResetAppearance = "Reset Quick Snippets appearance"
+    override val overlayResetAppearanceSubtitle = "Reset all opacities, shadow, and bubble size to defaults without changing position or data"
+    override val overlayResetConfirmTitle = "Reset appearance?"
+    override val overlayResetConfirmMessage = "This will reset all bubble and popup opacities and sizes to defaults. Your saved snippets and filters will not be affected."
+    override val overlayResetConfirmButton = "Reset"
+    override val overlayOpeningBehavior = "Opening behavior"
+    override val overlayOpenPopupWith = "Open popup with"
+    override val overlayFilterAll = "All snippets"
+    override val overlayFilterPinned = "Pinned snippets"
+    override val overlayFilterFrequent = "Frequently used"
+    override val overlayFilterLastUsed = "Last used filter"
+    override val overlayFilterCustom = "Custom category"
+    override val overlayPopupContent = "Popup content"
+    override val overlayShowTitle = "Show title in popup"
+    override val overlayShowTitleSubtitle = "Display app name and quick actions at the top"
+    override val overlayShowSearch = "Show search in popup"
+    override val overlayShowSearchSubtitle = "Display search input in quick snippets"
+    override val overlayShowCategories = "Show categories in popup"
+    override val overlayShowCategoriesSubtitle = "Display language tabs in quick snippets"
+    override val overlayGrantPermission = "Grant"
+    override val overlayPermissionGranted = "Permission granted"
+    override fun overlayVisiblePercent(percent: Int) = "$percent% visible"
 }
 
 object StringsVi : AppStrings {
@@ -548,6 +652,58 @@ object StringsVi : AppStrings {
     override val quickSaveClipboard = "Lưu clipboard"
     override val clipboardSavedSuccess = "Đã lưu nội dung clipboard thành snippet mới!"
     override val clipboardEmpty = "Bộ nhớ tạm hiện đang trống"
+    override val overlayAppearanceSection = "Giao diện"
+    override val overlayPresets = "Giao diện mẫu (Presets)"
+    override val overlayPresetBalanced = "Cân bằng"
+    override val overlayPresetBalancedDesc = "Độ tương phản rõ nét với điều khiển kín đáo"
+    override val overlayPresetFloating = "Snippet nổi không nền"
+    override val overlayPresetFloatingDesc = "Ẩn hoàn toàn nền panel; chỉ hiện các thẻ snippet nổi"
+    override val overlayPresetDiscreet = "Kín đáo"
+    override val overlayPresetDiscreetDesc = "Panel mờ êm dịu, không làm tối thẻ snippet"
+    override val overlayBubbleGroup = "Bong bóng nổi (Bubble)"
+    override val overlayBubbleSize = "Kích thước bóng nổi"
+    override val overlayBubbleOpacity = "Độ mờ bóng nổi"
+    override val overlayPopupComposition = "Độ mờ các lớp Popup (Composition)"
+    override val overlayCompositionTip = "Mẹo: Để snippet nổi trực tiếp trên cửa sổ ứng dụng khác mà không có khung nền, đặt Tổng thể 100%, Nền popup 0%, và Thẻ snippet 100%."
+    override val overlayMasterOpacity = "Toàn bộ popup (Tổng thể)"
+    override val overlayMasterOpacitySubtitle = "Hệ số mờ chung cho tất cả thành phần của popup"
+    override val overlaySurfaceOpacity = "Nền popup (Background surface)"
+    override val overlaySurfaceOpacitySubtitle = "Lớp nền và đường viền của cửa sổ nổi"
+    override val overlaySnippetsOpacity = "Thẻ snippet (Cards)"
+    override val overlaySnippetsOpacitySubtitle = "Nội dung các thẻ snippet trong danh sách"
+    override val overlayChromeOpacity = "Thanh tiêu đề / tìm kiếm / thẻ tag"
+    override val overlayChromeOpacitySubtitle = "Tiêu đề, ô tìm kiếm và hàng chip ngôn ngữ"
+    override val overlayCloseOpacity = "Nút đóng (Close button)"
+    override val overlayCloseOpacitySubtitle = "Nút tròn X ở góc trên bên phải"
+    override val overlayResizeOpacity = "Nút co giãn (Resize handle)"
+    override val overlayResizeOpacitySubtitle = "Tay cầm co giãn ở góc dưới bên phải"
+    override val overlaySnippetClarity = "Độ rõ nét & Đổ bóng thẻ"
+    override val overlayShadowStrength = "Độ tương phản đổ bóng thẻ"
+    override val overlayShadowStrengthSubtitle = "Đổ bóng và viền nổi giúp thẻ snippet nổi bật trên nền ứng dụng khác."
+    override val overlayRevealControls = "Hiện lại điều khiển popup"
+    override val overlayRevealControlsSubtitle = "Tạm thời đặt bóng nổi và mọi lớp popup lên 100% rõ nét trong 5 giây"
+    override val overlayResetAppearance = "Khôi phục giao diện mặc định"
+    override val overlayResetAppearanceSubtitle = "Đặt lại toàn bộ độ mờ, bóng đổ và kích thước về mặc định mà không ảnh hưởng dữ liệu"
+    override val overlayResetConfirmTitle = "Khôi phục giao diện?"
+    override val overlayResetConfirmMessage = "Thao tác này sẽ đặt lại kích thước và độ mờ của bóng nổi và popup về mặc định ban đầu. Dữ liệu snippet của bạn sẽ không bị thay đổi."
+    override val overlayResetConfirmButton = "Khôi phục"
+    override val overlayOpeningBehavior = "Hành vi khi mở popup"
+    override val overlayOpenPopupWith = "Mở popup với"
+    override val overlayFilterAll = "Tất cả snippet"
+    override val overlayFilterPinned = "Snippet đã ghim"
+    override val overlayFilterFrequent = "Thường xuyên dùng"
+    override val overlayFilterLastUsed = "Bộ lọc dùng gần nhất"
+    override val overlayFilterCustom = "Danh mục tùy chọn"
+    override val overlayPopupContent = "Nội dung hiển thị popup"
+    override val overlayShowTitle = "Hiện tiêu đề trong popup"
+    override val overlayShowTitleSubtitle = "Hiển thị tên app và nút lưu clipboard ở trên cùng"
+    override val overlayShowSearch = "Hiện tìm kiếm trong popup"
+    override val overlayShowSearchSubtitle = "Hiển thị ô nhập tìm kiếm nhanh trong popup"
+    override val overlayShowCategories = "Hiện danh mục trong popup"
+    override val overlayShowCategoriesSubtitle = "Hiển thị các chip lọc ngôn ngữ trong popup"
+    override val overlayGrantPermission = "Cấp quyền"
+    override val overlayPermissionGranted = "Đã cấp quyền"
+    override fun overlayVisiblePercent(percent: Int) = "$percent% hiển thị"
 }
 
 val LocalAppStrings = compositionLocalOf<AppStrings> { StringsEn }

@@ -2,8 +2,10 @@ package com.snapsave.app.service
 
 import android.content.Context
 import android.content.res.Configuration
-import android.graphics.Color
 import android.os.Build
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.graphics.toArgb
 
 data class SnippetOverlayPalette(
     val surfaceColor: Int,
@@ -14,6 +16,7 @@ data class SnippetOverlayPalette(
     val textColor: Int,
     val mutedTextColor: Int,
     val outlineColor: Int,
+    val outlineVariantColor: Int,
     val accentColor: Int,
     val selectedChipContainerColor: Int,
     val selectedChipContentColor: Int,
@@ -30,64 +33,60 @@ object SnippetOverlayPaletteResolver {
 
     fun resolve(context: Context): SnippetOverlayPalette {
         val isDark = isDark(context)
-        return if (isDark) {
-            // Dark Mode Palette
-            val primary = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                try { context.getColor(android.R.color.system_accent1_200) } catch (_: Exception) { Color.parseColor("#90CAF9") }
-            } else Color.parseColor("#90CAF9")
-
-            val surface = Color.parseColor("#181A20")
-            val surfaceVariant = Color.parseColor("#262A34")
-            val text = Color.parseColor("#F5F7FA")
-            val mutedText = Color.parseColor("#9EA5B5")
-            val outline = Color.parseColor("#3A4050")
-            val primaryContainer = Color.parseColor("#1E3A5F")
-            val onPrimaryContainer = Color.parseColor("#D0E4FF")
-
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val scheme = if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             SnippetOverlayPalette(
-                surfaceColor = surface,
-                surfaceVariantColor = surfaceVariant,
-                primaryColor = primary,
-                primaryContainerColor = primaryContainer,
-                onPrimaryContainerColor = onPrimaryContainer,
-                textColor = text,
-                mutedTextColor = mutedText,
-                outlineColor = outline,
-                accentColor = primary,
-                selectedChipContainerColor = primary,
-                selectedChipContentColor = Color.parseColor("#0D1B2A"),
+                surfaceColor = scheme.surface.toArgb(),
+                surfaceVariantColor = scheme.surfaceVariant.toArgb(),
+                primaryColor = scheme.primary.toArgb(),
+                primaryContainerColor = scheme.primaryContainer.toArgb(),
+                onPrimaryContainerColor = scheme.onPrimaryContainer.toArgb(),
+                textColor = scheme.onSurface.toArgb(),
+                mutedTextColor = scheme.onSurfaceVariant.toArgb(),
+                outlineColor = scheme.outline.toArgb(),
+                outlineVariantColor = scheme.outlineVariant.toArgb(),
+                accentColor = scheme.tertiary.toArgb(),
+                selectedChipContainerColor = scheme.primary.toArgb(),
+                selectedChipContentColor = scheme.onPrimary.toArgb(),
                 selectedChipStrokeColor = null,
-                isDark = true
+                isDark = isDark
             )
         } else {
-            // Light Mode Palette
-            val primary = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                try { context.getColor(android.R.color.system_accent1_600) } catch (_: Exception) { Color.parseColor("#1976D2") }
-            } else Color.parseColor("#1976D2")
-
-            val surface = Color.parseColor("#FFFFFF")
-            val surfaceVariant = Color.parseColor("#F1F3F7")
-            val text = Color.parseColor("#1C1E21")
-            val mutedText = Color.parseColor("#5A6270")
-            val outline = Color.parseColor("#D5DAE2")
-            val primaryContainer = Color.parseColor("#E3F2FD")
-            val onPrimaryContainer = Color.parseColor("#0D47A1")
-
-            SnippetOverlayPalette(
-                surfaceColor = surface,
-                surfaceVariantColor = surfaceVariant,
-                primaryColor = primary,
-                primaryContainerColor = primaryContainer,
-                onPrimaryContainerColor = onPrimaryContainer,
-                textColor = text,
-                mutedTextColor = mutedText,
-                outlineColor = outline,
-                accentColor = primary,
-                selectedChipContainerColor = primary,
-                selectedChipContentColor = Color.WHITE,
-                selectedChipStrokeColor = null,
-                isDark = false
-            )
+            if (isDark) {
+                SnippetOverlayPalette(
+                    surfaceColor = android.graphics.Color.parseColor("#131318"),
+                    surfaceVariantColor = android.graphics.Color.parseColor("#262A34"),
+                    primaryColor = android.graphics.Color.parseColor("#BBC3FF"),
+                    primaryContainerColor = android.graphics.Color.parseColor("#2E3CC8"),
+                    onPrimaryContainerColor = android.graphics.Color.parseColor("#DFE1FF"),
+                    textColor = android.graphics.Color.parseColor("#F5F7FA"),
+                    mutedTextColor = android.graphics.Color.parseColor("#9EA5B5"),
+                    outlineColor = android.graphics.Color.parseColor("#444955"),
+                    outlineVariantColor = android.graphics.Color.parseColor("#343A48"),
+                    accentColor = android.graphics.Color.parseColor("#E6BAD8"),
+                    selectedChipContainerColor = android.graphics.Color.parseColor("#BBC3FF"),
+                    selectedChipContentColor = android.graphics.Color.parseColor("#12226B"),
+                    selectedChipStrokeColor = null,
+                    isDark = true
+                )
+            } else {
+                SnippetOverlayPalette(
+                    surfaceColor = android.graphics.Color.parseColor("#FBF8FF"),
+                    surfaceVariantColor = android.graphics.Color.parseColor("#E1E4EE"),
+                    primaryColor = android.graphics.Color.parseColor("#4654E0"),
+                    primaryContainerColor = android.graphics.Color.parseColor("#DFE1FF"),
+                    onPrimaryContainerColor = android.graphics.Color.parseColor("#00125C"),
+                    textColor = android.graphics.Color.parseColor("#191C20"),
+                    mutedTextColor = android.graphics.Color.parseColor("#44474F"),
+                    outlineColor = android.graphics.Color.parseColor("#74777F"),
+                    outlineVariantColor = android.graphics.Color.parseColor("#C4C6D0"),
+                    accentColor = android.graphics.Color.parseColor("#77536D"),
+                    selectedChipContainerColor = android.graphics.Color.parseColor("#4654E0"),
+                    selectedChipContentColor = android.graphics.Color.WHITE,
+                    selectedChipStrokeColor = null,
+                    isDark = false
+                )
+            }
         }
     }
 }
